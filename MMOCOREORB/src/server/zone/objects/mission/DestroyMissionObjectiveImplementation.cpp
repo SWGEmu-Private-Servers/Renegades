@@ -213,7 +213,15 @@ void DestroyMissionObjectiveImplementation::spawnLair() {
 	 	lairObject->setFaction(lair->getFaction());
 	 	lairObject->setPvpStatusBitmask(CreatureFlag::ATTACKABLE);
 	 	lairObject->setOptionsBitmask(0, false);
-	 	lairObject->setMaxCondition(difficultyLevel * (900 + System::random(200)));
+		if (mission->isLargePack())
+		{
+			lairObject->setMaxCondition((difficultyLevel * (900 + System::random(200))) * 2);
+			lairObject->setLargePack(100 + System::random(900));
+		}
+		else
+		{
+			lairObject->setMaxCondition(difficultyLevel * (900 + System::random(200)));
+		}
 	 	lairObject->setConditionDamage(0, false);
 	 	lairObject->initializePosition(pos.getX(), pos.getZ(), pos.getY());
 	 	lairObject->setDespawnOnNoPlayersInRange(false);
@@ -229,6 +237,11 @@ void DestroyMissionObjectiveImplementation::spawnLair() {
 	 	lairObserver->setDifficulty(difficulty);
 	 	lairObserver->setObserverType(ObserverType::LAIR);
 	 	lairObserver->setSize(mission->getSize());
+
+		if (mission->isLargePack())
+		{
+			lairObserver->setLargePack();
+		}
 
 	 	lairObject->registerObserver(ObserverEventType::OBJECTDESTRUCTION, lairObserver);
 	 	lairObject->registerObserver(ObserverEventType::DAMAGERECEIVED, lairObserver);

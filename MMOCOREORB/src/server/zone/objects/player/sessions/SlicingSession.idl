@@ -121,15 +121,15 @@ class SlicingSession extends Facade {
 
 	private native void handleUseFlowAnalyzer();
 
-	private native void handleSlice(SuiListBox suiBox);
+	private native void handleSlice(SuiListBox suiBox, byte menuID);
 
-	private native void handleWeaponSlice();
+	private native void handleWeaponSlice(byte menuID);
 
 	private native void handleSliceDamage(byte percent);
 
 	private native void handleSliceSpeed(byte percent);
 
-	private native void handleArmorSlice();
+	private native void handleArmorSlice(byte menuID);
 
 	private native void handleSliceEncumbrance(byte percent);
 

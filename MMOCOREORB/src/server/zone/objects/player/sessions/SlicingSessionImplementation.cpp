@@ -141,14 +141,31 @@ void SlicingSessionImplementation::generateSliceMenu(SuiListBox* suiBox) {
 			suiBox->addMenuItem("@slicing/slicing:use_analyzer", 3);
 		}
 
+		suiBox->setPromptText(prompt.toString());
+
 	} else if (progress == 1) {
 		prompt << progress;
 
 		suiBox->addMenuItem((cableBlue) ? "@slicing/slicing:blue_cable_cut" : "@slicing/slicing:blue_cable", 0);
 		suiBox->addMenuItem((cableRed) ? "@slicing/slicing:red_cable_cut" : "@slicing/slicing:red_cable", 1);
+
+		suiBox->setPromptText(prompt.toString());
+	}
+	else
+	{
+		suiBox->setPromptText("Select an option:");
+		if (tangibleObject->isWeaponObject())
+		{
+			suiBox->addMenuItem("Slice Damage", 0);
+			suiBox->addMenuItem("Slice Speed", 1);
+		}
+		else if (tangibleObject->isArmorObject())
+		{
+			suiBox->addMenuItem("Slice Base Effectiveness", 0);
+			suiBox->addMenuItem("Slice Encumbrance", 1);
+		}
 	}
 
-	suiBox->setPromptText(prompt.toString());
 	player->getPlayerObject()->addSuiBox(suiBox);
 	player->sendMessage(suiBox->generateMessage());
 
@@ -209,14 +226,37 @@ void SlicingSessionImplementation::handleMenuSelect(CreatureObject* pl, byte men
 			break;
 		}
 	} else {
-		if (hasPrecisionLaserKnife()) {
-			if (firstCable != menuID)
-				handleSlice(suiBox); // Handle Successful Slice
+		if (progress == 1)
+		{
+			if (hasPrecisionLaserKnife())
+			{
+				if (firstCable == menuID)
+				{
+					handleSliceFailed(); // Handle failed slice attempt //bugfix 820
+					return;
+				}
+				else
+				{
+					if (player->hasSkill("combat_smuggler_master") && (tangibleObject->isWeaponObject() || tangibleObject->isArmorObject()))
+					{
+						cableRed = true;
+						cableBlue = true;
+					}
+					else
+					{
+						handleSlice(suiBox, 0); // Handle Successful Slice
+					}
+				}
+			}
 			else
-				handleSliceFailed(); // Handle failed slice attempt //bugfix 820
-			return;
-		} else
-			player->sendSystemMessage("@slicing/slicing:no_knife");
+			{
+				player->sendSystemMessage("@slicing/slicing:no_knife");
+			}
+		}
+		else
+		{
+			handleSlice(suiBox, (menuID + 1)); // Handle Successful Slice
+		}
 	}
 
 	generateSliceMenu(suiBox);
@@ -445,7 +485,7 @@ void SlicingSessionImplementation::handleUseFlowAnalyzer() {
 	player->sendSystemMessage("@slicing/slicing:no_node");
 }
 
-void SlicingSessionImplementation::handleSlice(SuiListBox* suiBox) {
+void SlicingSessionImplementation::handleSlice(SuiListBox* suiBox, byte menuID) {
 	ManagedReference<CreatureObject*> player = this->player.get();
 	ManagedReference<TangibleObject*> tangibleObject = this->tangibleObject.get();
 
@@ -477,10 +517,10 @@ void SlicingSessionImplementation::handleSlice(SuiListBox* suiBox) {
 		term->addSlicer(player);
 		player->sendSystemMessage("@slicing/slicing:terminal_success");
 	} else if (tangibleObject->isWeaponObject()) {
-		handleWeaponSlice();
+		handleWeaponSlice(menuID);
 		playerManager->awardExperience(player, "slicing", 250, true); // Weapon Slice XP
 	} else if (tangibleObject->isArmorObject()) {
-		handleArmorSlice();
+		handleArmorSlice(menuID);
 		playerManager->awardExperience(player, "slicing", 250, true); // Armor Slice XP
 	} else if ( isBaseSlice()){
 		playerManager->awardExperience(player,"slicing", 1000, true); // Base slicing
@@ -504,7 +544,7 @@ void SlicingSessionImplementation::handleSlice(SuiListBox* suiBox) {
 
 }
 
-void SlicingSessionImplementation::handleWeaponSlice() {
+void SlicingSessionImplementation::handleWeaponSlice(byte menuID) {
 	ManagedReference<CreatureObject*> player = this->player.get();
 	ManagedReference<TangibleObject*> tangibleObject = this->tangibleObject.get();
 
@@ -532,13 +572,23 @@ void SlicingSessionImplementation::handleWeaponSlice() {
 
 	}
 
-	uint8 percentage = System::random(max - min) + min;
+	if (sliceSkill == 5)
+	{
+		int force_luck = player->getSkillMod("force_luck");
+		if (force_luck > 0)
+		{
+			min += (force_luck * 2); // 28 min for 4 luck and Master Smuggler
+		}
+	}
 
-	switch(System::random(1)) {
-	case 0:
+	uint8 percentage = System::random(max - min) + min;
+	uint8 sliceType = (menuID == 0) ? (System::random(1) + 1) : menuID;
+
+	switch(sliceType) {
+	case 1:
 		handleSliceDamage(percentage);
 		break;
-	case 1:
+	case 2:
 		handleSliceSpeed(percentage);
 		break;
 	}
@@ -611,40 +661,57 @@ void SlicingSessionImplementation::handleSliceSpeed(uint8 percent) {
 	player->sendSystemMessage(params);
 }
 
-void SlicingSessionImplementation::handleArmorSlice() {
+void SlicingSessionImplementation::handleArmorSlice(byte menuID) {
 	ManagedReference<CreatureObject*> player = this->player.get();
 	ManagedReference<TangibleObject*> tangibleObject = this->tangibleObject.get();
 
 	if (tangibleObject == nullptr || player == nullptr)
 		return;
 
-	uint8 sliceType = System::random(1);
+	uint8 sliceType = (menuID == 0) ? (System::random(1) + 1) : menuID;
+
 	int sliceSkill = getSlicingSkill(player);
 	uint8 min = 0;
 	uint8 max = 0;
 
 	switch (sliceSkill) {
 	case 5:
-		min += (sliceType == 0) ? 6 : 5;
+		min += (sliceType == 1) ? 6 : 5;
 		max += 5;
 	case 4:
-		min += (sliceType == 0) ? 0 : 10;
+		min += (sliceType == 1) ? 0 : 10;
 		max += 10;
 	case 3:
 		min += 5;
-		max += (sliceType == 0) ? 20 : 30;
+		max += (sliceType == 1) ? 20 : 30;
 		break;
 	default:
 		return;
+	}
+	
+	if (sliceSkill == 5)
+	{
+		int force_luck = player->getSkillMod("force_luck");
+		if (force_luck > 0)
+		{
+			if (sliceType == 1)
+			{
+				min += (force_luck * 3); // 23-35 min-max
+			}
+			else
+			{
+				min += (force_luck * 4); // 36-45 min-max
+			}
+		}
 	}
 
 	uint8 percent = System::random(max - min) + min;
 
 	switch (sliceType) {
-	case 0:
+	case 1:
 		handleSliceEffectiveness(percent);
 		break;
-	case 1:
+	case 2:
 		handleSliceEncumbrance(percent);
 		break;
 	}
@@ -723,16 +790,11 @@ void SlicingSessionImplementation::handleContainerSlice() {
 			return;
 		}
 
-		TransactionLog trx(TrxCode::SLICECONTAINER, player, container);
-
-		if (System::random(10) != 4) {
-			lootManager->createLoot(trx, container, "looted_container");
-		}
+		if (System::random(10) != 4)
+			lootManager->createLoot(container, "looted_container");
 
 		inventory->transferObject(container, -1);
 		container->sendTo(player, true);
-
-		trx.commit();
 
 		if (inventory->hasObjectInContainer(tangibleObject->getObjectID())) {
 			//inventory->removeObject(tangibleObject, true);

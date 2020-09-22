@@ -30,12 +30,13 @@ class MissionObject extends IntangibleObject {
 	protected int difficulty;
 	protected unicode creatorName;
 	protected int rewardCredits;
-	protected int rewardCreditsDivisor;
 	protected int rewardFactionPointsRebel;
 	protected int rewardFactionPointsImperial;
 	protected int missionNumber;
 	protected unsigned int faction;
 	protected int missionLevel;
+
+	protected boolean isLargePackSpawn;
 
 	protected float size;
 
@@ -84,7 +85,6 @@ class MissionObject extends IntangibleObject {
 		difficulty = 2;
 
 		rewardCredits = 100;
-		rewardCreditsDivisor = 1;
 		rewardFactionPointsRebel = 0;
 		rewardFactionPointsImperial = 0;
 
@@ -175,6 +175,11 @@ class MissionObject extends IntangibleObject {
 	public void abort() {
 		if (missionObjective)
 			missionObjective.abort();
+	}
+
+	@preLocked
+	public void setLargePack(boolean n) {
+		isLargePackSpawn = n;
 	}
 
 	@preLocked
@@ -289,11 +294,6 @@ class MissionObject extends IntangibleObject {
 	}
 
 	@read
-	public int getRewardCreditsDivisor() {
-		return rewardCreditsDivisor;
-	}
-
-	@read
 	public unicode getCreatorName() {
 		return creatorName;
 	}
@@ -352,6 +352,11 @@ class MissionObject extends IntangibleObject {
 	@dirty
 	public boolean isMissionObject() {
 		return true;
+	}
+
+	@dirty
+	public boolean isLargePack() {
+		return isLargePackSpawn;
 	}
 
 	@read

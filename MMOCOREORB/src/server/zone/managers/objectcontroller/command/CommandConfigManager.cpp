@@ -60,6 +60,9 @@
 #include "server/zone/objects/creature/commands/pet/PetClearPatrolPointsCommand.h"
 #include "server/zone/objects/creature/commands/pet/PetGetPatrolPointCommand.h"
 
+#include "server/zone/objects/creature/commands/CheckResources.h"
+#include "server/zone/objects/creature/commands/RetrieveResources.h"
+
 #include "server/zone/objects/creature/commands/JediQueueCommand.h"
 
 #include "templates/datatables/DataTableIff.h"
@@ -850,4 +853,8 @@ void CommandConfigManager::registerCommands() {
 	commandFactory.registerCommand<PetPatrolCommand>(String("petPatrol").toLowerCase());
 	commandFactory.registerCommand<PetClearPatrolPointsCommand>(String("petClearPatrolPoints").toLowerCase());
 	commandFactory.registerCommand<PetGetPatrolPointCommand>(String("petGetPatrolPoint").toLowerCase());
+
+	// Renegades Custom commands
+	commandFactory.registerCommand<CheckResourcesCommand>(String("checkResources").toLowerCase());
+	commandFactory.registerCommand<RetrieveResourcesCommand>(String("retrieveResources").toLowerCase());
 }

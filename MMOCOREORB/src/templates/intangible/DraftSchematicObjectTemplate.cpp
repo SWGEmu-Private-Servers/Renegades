@@ -39,7 +39,7 @@ DraftSchematicObjectTemplate::DraftSchematicObjectTemplate() {
 	skillMods.setNoDuplicateInsertPlan();
 	skillMods.setNullValue(0);
 	labratory = 0;
-	factoryCrateSize = 25;
+	factoryCrateSize = 1000;
 }
 
 DraftSchematicObjectTemplate::~DraftSchematicObjectTemplate() {
@@ -182,7 +182,7 @@ void DraftSchematicObjectTemplate::parseVariableData(const String& varName, LuaO
 	} else {
 		data->pop();
 	}
-
+	if ((factoryCrateSize > 0) && (factoryCrateSize < 1000)) factoryCrateSize = 1000;
 }
 
 void DraftSchematicObjectTemplate::readObject(LuaObject* templateData) {

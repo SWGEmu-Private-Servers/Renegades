@@ -202,8 +202,8 @@ int CombatManager::doCombatAction(CreatureObject* attacker, WeaponObject* weapon
 	debug("past special attack cost");
 
 	int damage = 0;
-	bool shouldGcwCrackdownTef = false, shouldGcwTef = false, shouldBhTef = false;
-	damage = doTargetCombatAction(attacker, weapon, defenderObject, data, &shouldGcwCrackdownTef, &shouldGcwTef, &shouldBhTef);
+	bool shouldGcwTef = false, shouldBhTef = false;
+	damage = doTargetCombatAction(attacker, weapon, defenderObject, data, &shouldGcwTef, &shouldBhTef);
 
 	if (data.getCommand()->isAreaAction() || data.getCommand()->isConeAction()) {
 		Reference<SortedVector<ManagedReference<TangibleObject*> >* > areaDefenders = getAreaTargets(attacker, weapon, defenderObject, data);
@@ -220,7 +220,8 @@ int CombatManager::doCombatAction(CreatureObject* attacker, WeaponObject* weapon
 					continue;
 				}
 
-				damage += doTargetCombatAction(attacker, weapon, areaDefenders->get(i), data, &shouldGcwCrackdownTef, &shouldGcwTef, &shouldBhTef);
+				damage += doTargetCombatAction(attacker, weapon, areaDefenders->get(i), data, &shouldGcwTef,
+											   &shouldBhTef);
 				areaDefenders->remove(i);
 
 				tano->unlock();
@@ -243,7 +244,7 @@ int CombatManager::doCombatAction(CreatureObject* attacker, WeaponObject* weapon
 	}
 
 	// Update PvP TEF Duration
-	if (shouldGcwCrackdownTef || shouldGcwTef || shouldBhTef) {
+	if (shouldGcwTef || shouldBhTef) {
 		ManagedReference<CreatureObject*> attackingCreature = attacker->isPet() ? attacker->getLinkedCreature() : attacker;
 
 		if (attackingCreature != nullptr) {
@@ -251,7 +252,7 @@ int CombatManager::doCombatAction(CreatureObject* attacker, WeaponObject* weapon
 
 			if (ghost != nullptr) {
 				Locker olocker(attackingCreature, attacker);
-				ghost->updateLastCombatActionTimestamp(shouldGcwCrackdownTef, shouldGcwTef, shouldBhTef);
+				ghost->updateLastPvpCombatActionTimestamp(shouldGcwTef, shouldBhTef);
 			}
 		}
 	}
@@ -281,7 +282,7 @@ int CombatManager::doCombatAction(TangibleObject* attacker, WeaponObject* weapon
 	return damage;
 }
 
-int CombatManager::doTargetCombatAction(CreatureObject* attacker, WeaponObject* weapon, TangibleObject* tano, const CreatureAttackData& data, bool* shouldGcwCrackdownTef, bool* shouldGcwTef, bool* shouldBhTef) const {
+int CombatManager::doTargetCombatAction(CreatureObject* attacker, WeaponObject* weapon, TangibleObject* tano, const CreatureAttackData& data, bool* shouldGcwTef, bool* shouldBhTef) const {
 	int damage = 0;
 
 	Locker clocker(tano, attacker);
@@ -298,7 +299,7 @@ int CombatManager::doTargetCombatAction(CreatureObject* attacker, WeaponObject* 
 		if (defender->getWeapon() == nullptr)
 			return 0;
 
-		damage = doTargetCombatAction(attacker, weapon, defender, data, shouldGcwCrackdownTef, shouldGcwTef, shouldBhTef);
+		damage = doTargetCombatAction(attacker, weapon, defender, data, shouldGcwTef, shouldBhTef);
 	} else {
 		int poolsToDamage = calculatePoolsToDamage(data.getPoolsToDamage());
 
@@ -334,7 +335,7 @@ int CombatManager::doTargetCombatAction(CreatureObject* attacker, WeaponObject* 
 	return damage;
 }
 
-int CombatManager::doTargetCombatAction(CreatureObject* attacker, WeaponObject* weapon, CreatureObject* defender, const CreatureAttackData& data, bool* shouldGcwCrackdownTef, bool* shouldGcwTef, bool* shouldBhTef) const {
+int CombatManager::doTargetCombatAction(CreatureObject* attacker, WeaponObject* weapon, CreatureObject* defender, const CreatureAttackData& data, bool* shouldGcwTef, bool* shouldBhTef) const {
 	if (defender->isEntertaining())
 		defender->stopEntertaining();
 
@@ -362,7 +363,7 @@ int CombatManager::doTargetCombatAction(CreatureObject* attacker, WeaponObject* 
 	case MISS:
 		doMiss(attacker, weapon, defender, damage);
 		broadcastCombatAction(attacker, defender, weapon, data, 0, hitVal, 0);
-		checkForTefs(attacker, defender, shouldGcwCrackdownTef, shouldGcwTef, shouldBhTef);
+		checkForTefs(attacker, defender, shouldGcwTef, shouldBhTef);
 		return 0;
 		break;
 	case BLOCK:
@@ -387,6 +388,42 @@ int CombatManager::doTargetCombatAction(CreatureObject* attacker, WeaponObject* 
 		break;
 	}
 
+	// Remove Force Run if PvP damage taken
+	if ((damage > 0) && attacker->isPlayerCreature() && defender->isPlayerCreature())
+	{
+		Buff* frBuff = nullptr;
+		Buff* mtBuff = nullptr;
+
+		if (defender->hasBuff(BuffCRC::JEDI_FORCE_RUN_1))
+		{
+			frBuff = defender->getBuff(BuffCRC::JEDI_FORCE_RUN_1);
+			mtBuff = defender->getBuff(STRING_HASHCODE("forcerun1"));
+		}
+		else if (defender->hasBuff(BuffCRC::JEDI_FORCE_RUN_2))
+		{
+			frBuff = defender->getBuff(BuffCRC::JEDI_FORCE_RUN_2);
+			mtBuff = defender->getBuff(STRING_HASHCODE("forcerun2"));
+		}
+		else if (defender->hasBuff(BuffCRC::JEDI_FORCE_RUN_3))
+		{
+			frBuff = defender->getBuff(BuffCRC::JEDI_FORCE_RUN_3);
+			mtBuff = defender->getBuff(STRING_HASHCODE("forcerun3"));
+		}
+
+		if (frBuff != nullptr)
+		{
+			Locker frlocker(frBuff);
+			defender->removeBuff(frBuff);
+			defender->updateCooldownTimer("forcerun", 30000); // 30 second delay
+		}
+
+		if (mtBuff != nullptr)
+		{
+			Locker mtlocker(mtBuff);
+			defender->removeBuff(mtBuff);
+		}
+	}
+
 	// Apply states first
 	applyStates(attacker, defender, data);
 
@@ -394,6 +431,18 @@ int CombatManager::doTargetCombatAction(CreatureObject* attacker, WeaponObject* 
 	if (!data.isStateOnlyAttack()) {
 		if (defender->hasAttackDelay())
 			defender->removeAttackDelay();
+
+		if ((damage > 0) && attacker->isPlayerCreature() && !defender->isPlayerCreature()) // Let's give Commandos a nice bump in damage in PvE, with consumables
+		{
+			if ((weapon->getAttackType() == SharedWeaponObjectTemplate::GRENADEATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::HEAVYACIDBEAMATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::HEAVYPARTICLEBEAMATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::HEAVYROCKETLAUNCHERATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::HEAVYLAUNCHERATTACK))
+			{
+				damage *= 2.0F;
+			}
+		}
 
 		if (damageMultiplier != 0 && damage != 0) {
 			int poolsToDamage = calculatePoolsToDamage(data.getPoolsToDamage()); // TODO: animations are probably determined by which pools are damaged (high, mid, low, combos, etc)
@@ -410,7 +459,7 @@ int CombatManager::doTargetCombatAction(CreatureObject* attacker, WeaponObject* 
 
 	broadcastCombatAction(attacker, defender, weapon, data, damage, hitVal, hitLocation);
 
-	checkForTefs(attacker, defender, shouldGcwCrackdownTef, shouldGcwTef, shouldBhTef);
+	checkForTefs(attacker, defender, shouldGcwTef, shouldBhTef);
 
 	return damage;
 }
@@ -517,7 +566,7 @@ int CombatManager::doTargetCombatAction(TangibleObject* attacker, WeaponObject* 
 void CombatManager::applyDots(CreatureObject* attacker, CreatureObject* defender, const CreatureAttackData& data, int appliedDamage, int unmitDamage, int poolsToDamage) const {
 	const Vector<DotEffect>* dotEffects = data.getDotEffects();
 
-	if (defender->isInvulnerable())
+	if (defender->isPlayerCreature() && defender->getPvpStatusBitmask() == CreatureFlag::NONE)
 		return;
 
 	for (int i = 0; i < dotEffects->size(); i++) {
@@ -566,7 +615,7 @@ void CombatManager::applyDots(CreatureObject* attacker, CreatureObject* defender
 }
 
 void CombatManager::applyWeaponDots(CreatureObject* attacker, CreatureObject* defender, WeaponObject* weapon) const {
-	if (defender->isInvulnerable())
+	if (defender->getPvpStatusBitmask() == CreatureFlag::NONE)
 		return;
 
 	if (!weapon->isCertifiedFor(attacker))
@@ -738,12 +787,24 @@ int CombatManager::getAttackerAccuracyModifier(TangibleObject* attacker, Creatur
 
 	// FS skill mods
 	if (weapon->getAttackType() == SharedWeaponObjectTemplate::MELEEATTACK)
+	{
 		attackerAccuracy += creoAttacker->getSkillMod("melee_accuracy");
-	else if (weapon->getAttackType() == SharedWeaponObjectTemplate::RANGEDATTACK)
+	}
+	else if ((weapon->getAttackType() == SharedWeaponObjectTemplate::RANGEDATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::FORCEATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::TRAPATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::GRENADEATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::HEAVYACIDBEAMATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::HEAVYPARTICLEBEAMATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::HEAVYROCKETLAUNCHERATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::HEAVYLAUNCHERATTACK))
+	{
 		attackerAccuracy += creoAttacker->getSkillMod("ranged_accuracy");
+	}
 
 	// now apply overall weapon defense mods
-	if (weapon->isMeleeWeapon()) {
+	if (weapon->isMeleeWeapon())
+	{
 		switch (defender->getWeapon()->getGameObjectType()) {
 		case SceneObjectType::PISTOL:
 			attackerAccuracy += 20.f;
@@ -956,17 +1017,26 @@ int CombatManager::getSpeedModifier(CreatureObject* attacker, WeaponObject* weap
 	int speedMods = 0;
 
 	const auto weaponSpeedMods = weapon->getSpeedModifiers();
-
 	for (int i = 0; i < weaponSpeedMods->size(); ++i) {
 		speedMods += attacker->getSkillMod(weaponSpeedMods->get(i));
 	}
 
 	speedMods += attacker->getSkillMod("private_speed_bonus");
 
-	if (weapon->getAttackType() == SharedWeaponObjectTemplate::MELEEATTACK) {
+	if (weapon->getAttackType() == SharedWeaponObjectTemplate::MELEEATTACK)
+	{
 		speedMods += attacker->getSkillMod("private_melee_speed_bonus");
 		speedMods += attacker->getSkillMod("melee_speed");
-	} else if (weapon->getAttackType() == SharedWeaponObjectTemplate::RANGEDATTACK) {
+	}
+	else if ((weapon->getAttackType() == SharedWeaponObjectTemplate::RANGEDATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::FORCEATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::TRAPATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::GRENADEATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::HEAVYACIDBEAMATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::HEAVYPARTICLEBEAMATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::HEAVYROCKETLAUNCHERATTACK) ||
+					(weapon->getAttackType() == SharedWeaponObjectTemplate::HEAVYLAUNCHERATTACK))
+	{
 		speedMods += attacker->getSkillMod("private_ranged_speed_bonus");
 		speedMods += attacker->getSkillMod("ranged_speed");
 	}
@@ -1312,14 +1382,14 @@ float CombatManager::calculateDamage(CreatureObject* attacker, WeaponObject* wea
 			break;
 	}
 
-	if (lairObserver && lairObserver->getSpawnNumber() > 2)
+	if (lairObserver && lairObserver->getSpawnNumber() > 2 && !lairObserver->isLargePack())
 		damage *= 3.5;
 
 	return damage;
 }
 
 float CombatManager::doDroidDetonation(CreatureObject* droid, CreatureObject* defender, float damage) const {
-	if (defender->isInvulnerable()) {
+	if (defender->isPlayerCreature() && defender->getPvpStatusBitmask() == CreatureFlag::NONE) {
 		return 0;
 	}
 	if (defender->isCreatureObject()) {
@@ -1550,6 +1620,8 @@ int CombatManager::getHitChance(TangibleObject* attacker, CreatureObject* target
 
 		if (creoAttacker != nullptr && data.isForceAttack()) {
 			int attackerAccuracy = creoAttacker->getSkillMod(data.getCommand()->getAccuracySkillMod());
+			attackerAccuracy += data.getCommand()->getAccuracyBonus(); // Used with Force Choke
+
 			int targetDefense = targetCreature->getSkillMod("force_defense");
 
 			float attackerRoll = (float)System::random(249) + 1.f;
@@ -1806,7 +1878,7 @@ void CombatManager::applyStates(CreatureObject* creature, CreatureObject* target
 	const VectorMap<uint8, StateEffect>* stateEffects = data.getStateEffects();
 	int stateAccuracyBonus = data.getStateAccuracyBonus();
 
-	if (targetCreature->isInvulnerable())
+	if (targetCreature->isPlayerCreature() && targetCreature->getPvpStatusBitmask() == CreatureFlag::NONE)
 		return;
 
 	int playerLevel = 0;
@@ -1968,7 +2040,7 @@ int CombatManager::applyDamage(TangibleObject* attacker, WeaponObject* weapon, C
 	float ratio = weapon->getWoundsRatio();
 	float healthDamage = 0.f, actionDamage = 0.f, mindDamage = 0.f;
 
-	if (defender->isInvulnerable()) {
+	if (defender->isPlayerCreature() && defender->getPvpStatusBitmask() == CreatureFlag::NONE) {
 		return 0;
 	}
 
@@ -2107,7 +2179,7 @@ int CombatManager::applyDamage(CreatureObject* attacker, WeaponObject* weapon, T
 	if (poolsToDamage == 0)
 		return 0;
 
-	if (defender->getPvpStatusBitmask() == CreatureFlag::NONE) {
+	if (defender->isPlayerCreature() && defender->getPvpStatusBitmask() == CreatureFlag::NONE) {
 		return 0;
 	}
 
@@ -2885,45 +2957,19 @@ void CombatManager::initializeDefaultAttacks() {
 	defaultMeleeAttacks.add(STRING_HASHCODE("attack_low_center_medium_3"));
 }
 
-void CombatManager::checkForTefs(CreatureObject* attacker, CreatureObject* defender, bool* shouldGcwCrackdownTef, bool* shouldGcwTef, bool* shouldBhTef) const {
-	if (*shouldGcwCrackdownTef && *shouldGcwTef && *shouldBhTef) {
+void CombatManager::checkForTefs(CreatureObject* attacker, CreatureObject* defender, bool* shouldGcwTef, bool* shouldBhTef) const {
+	if (*shouldGcwTef && *shouldBhTef)
 		return;
-	}
 
 	ManagedReference<CreatureObject*> attackingCreature = attacker->isPet() ? attacker->getLinkedCreature() : attacker;
 	ManagedReference<CreatureObject*> targetCreature = defender->isPet() || defender->isVehicleObject() ? defender->getLinkedCreature() : defender;
 
-	if (attackingCreature != nullptr && targetCreature != nullptr) {
-		if (attackingCreature->isPlayerCreature() && targetCreature->isPlayerCreature() && !areInDuel(attackingCreature, targetCreature)) {
+	if (attackingCreature != nullptr && targetCreature != nullptr && attackingCreature->isPlayerCreature() && targetCreature->isPlayerCreature() && !areInDuel(attackingCreature, targetCreature)) {
 
-			if (!(*shouldGcwTef)) {
-				if (attackingCreature->getFaction() != targetCreature->getFaction() && attackingCreature->getFactionStatus() == FactionStatus::OVERT && targetCreature->getFactionStatus() == FactionStatus::OVERT) {
-					*shouldGcwTef = true;
-				}
-			}
+		if (!(*shouldGcwTef) && (attackingCreature->getFaction() != targetCreature->getFaction()) && (attackingCreature->getFactionStatus() == FactionStatus::OVERT) && (targetCreature->getFactionStatus() == FactionStatus::OVERT))
+			*shouldGcwTef = true;
 
-			if (!(*shouldBhTef)) {
-				if (attackingCreature->hasBountyMissionFor(targetCreature) || targetCreature->hasBountyMissionFor(attackingCreature)) {
-					*shouldBhTef = true;
-				}
-			}
-		}
-
-		if (!(*shouldGcwCrackdownTef)) {
-			if (attackingCreature->isPlayerObject() && targetCreature->isAiAgent()) {
-				Reference<PlayerObject*> ghost = attackingCreature->getPlayerObject();
-
-				if (ghost->hasCrackdownTefTowards(targetCreature->getFaction())) {
-					*shouldGcwCrackdownTef = true;
-				}
-			}
-			if (targetCreature->isPlayerObject() && attackingCreature->isAiAgent()) {
-				Reference<PlayerObject*> ghost = targetCreature->getPlayerObject();
-
-				if (ghost->hasCrackdownTefTowards(attackingCreature->getFaction())) {
-					*shouldGcwCrackdownTef = true;
-				}
-			}
-		}
+		if (!(*shouldBhTef) && (attackingCreature->hasBountyMissionFor(targetCreature) || targetCreature->hasBountyMissionFor(attackingCreature)))
+			*shouldBhTef = true;
 	}
 }

@@ -117,27 +117,6 @@ void TangibleObjectImplementation::notifyLoadFromDatabase() {
 	}
 }
 
-void TangibleObjectImplementation::destroyObjectFromDatabase(bool destroyContainedObjects) {
-	if (hasAntiDecayKit()) {
-		AntiDecayKit* adk = antiDecayKitObject.castTo<AntiDecayKit*>();
-
-		if (adk != nullptr) {
-			auto strongAdkParent = adk->getParent().get();
-			error()
-				<< "destroyObjectFromDatabase oid: " << getObjectID()
-				<< " has AntiDecayKit(" << adk->getObjectID()
-				<< ") with parent: " << (strongAdkParent != nullptr ? strongAdkParent->getObjectID() : 0)
-				<< ", removing adk from database."
-				;
-			Locker lock(adk);
-			adk->destroyObjectFromDatabase(true);
-			antiDecayKitObject = nullptr;
-		}
-	}
-
-	SceneObjectImplementation::destroyObjectFromDatabase(destroyContainedObjects);
-}
-
 void TangibleObjectImplementation::sendBaselinesTo(SceneObject* player) {
 	debug("sending tano baselines");
 
@@ -542,16 +521,6 @@ void TangibleObjectImplementation::fillAttributeList(AttributeListMessage* alm, 
 	if (maxCondition > 0) {
 		StringBuffer cond;
 		cond << (maxCondition-(int)conditionDamage) << "/" << maxCondition;
-
-		auto config = ConfigManager::instance();
-
-		if (isForceNoTrade()) {
-			cond << config->getForceNoTradeMessage();
-		} else if (antiDecayKitObject != nullptr && antiDecayKitObject->isForceNoTrade()) {
-			cond << config->getForceNoTradeADKMessage();
-		} else if (isNoTrade() || containsNoTradeObjectRecursive()) {
-			cond << config->getNoTradeMessage();
-		}
 
 		alm->insertAttribute("condition", cond);
 	}
@@ -996,14 +965,6 @@ void TangibleObjectImplementation::repair(CreatureObject* player) {
 		return;
 	}
 
-	//Condition is unrepairable
-	if ((getMaxCondition() - getConditionDamage()) <= 0) {
-		StringIdChatParameter cantrepair("error_message", "sys_repair_unrepairable");
-		cantrepair.setTT(getDisplayedName());
-		player->sendSystemMessage(cantrepair); //%TT's condition is beyond repair even for your skills.
-		return;
-	}
-
 	SceneObject* inventory = player->getSlottedObject("inventory");
 	if (inventory == nullptr)
 		return;
@@ -1065,10 +1026,6 @@ void TangibleObjectImplementation::repair(CreatureObject* player) {
 	/// Subtract complexity
 	repairChance -= (getComplexity() / 3);
 
-	/// 5% random failure
-	if (getMaxCondition() < 20 || roll < 5)
-		repairChance = 0;
-
 	if (roll > 95)
 		repairChance = 100;
 
@@ -1100,22 +1057,19 @@ bool TangibleObjectImplementation::isAttackableBy(TangibleObject* object) {
 }
 
 bool TangibleObjectImplementation::isAttackableBy(CreatureObject* object) {
-	if (object->isPlayerCreature()) {
-		Reference<PlayerObject*> ghost = object->getPlayerObject();
-		if (ghost != nullptr && ghost->hasCrackdownTefTowards(getFaction())) {
-			return true;
-		}
-		if (isImperial() && (!object->isRebel() || object->getFactionStatus() == 0)) {
-			return false;
-		}
-
-		if (isRebel() && (!object->isImperial() || object->getFactionStatus() == 0)) {
-			return false;
-		}
-	} else if (isImperial() && !(object->isRebel())) {
+	if (isImperial() && !(object->isRebel())) {
 		return false;
 	} else if (isRebel() && !(object->isImperial())) {
 		return false;
+	} else if (object->isPlayerCreature()) {
+		if (isImperial() && object->getFactionStatus() == 0) {
+			return false;
+		}
+
+		if (isRebel() && object->getFactionStatus() == 0) {
+			return false;
+		}
+
 	} else if (object->isAiAgent()) {
 		AiAgent* ai = object->asAiAgent();
 

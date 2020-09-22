@@ -17,6 +17,7 @@
 #include "server/zone/objects/region/CityRegion.h"
 #include "server/zone/objects/player/sessions/TradeSession.h"
 #include "server/zone/managers/player/PlayerManager.h"
+#include "server/zone/objects/player/PlayerObject.h"
 
 void VehicleControlDeviceImplementation::generateObject(CreatureObject* player) {
 	if (player->isDead() || player->isIncapacitated())
@@ -79,15 +80,21 @@ void VehicleControlDeviceImplementation::generateObject(CreatureObject* player) 
 		}
 	}
 
+	PlayerObject* ghost = player->getPlayerObject().get();
 	if(player->getCurrentCamp() == nullptr && player->getCityRegion() == nullptr) {
 
 		Reference<CallMountTask*> callMount = new CallMountTask(_this.getReferenceUnsafeStaticCast(), player, "call_mount");
 
-		StringIdChatParameter message("pet/pet_menu", "call_vehicle_delay");
-		message.setDI(15);
-		player->sendSystemMessage(message);
-
-		player->addPendingTask("call_mount", callMount, 15 * 1000);
+		if (ghost->hasPvpTef())
+		{
+			player->addPendingTask("call_mount", callMount, 60 * 1000);
+			player->sendSystemMessage("Generating vehicle in 60 seconds. Combat will terminate vehicle generation.");
+		}
+		else
+		{
+			player->addPendingTask("call_mount", callMount, 3 * 1000);
+			player->sendSystemMessage("Generating vehicle in 3 seconds. Combat will terminate vehicle generation.");
+		}
 
 		if (vehicleControlObserver == nullptr) {
 			vehicleControlObserver = new VehicleControlObserver(_this.getReferenceUnsafeStaticCast());
@@ -96,8 +103,19 @@ void VehicleControlDeviceImplementation::generateObject(CreatureObject* player) 
 
 		player->registerObserver(ObserverEventType::STARTCOMBAT, vehicleControlObserver);
 
-	} else {
+	} else if (ghost->hasPvpTef()) {
+		Reference<CallMountTask*> callMount = new CallMountTask(_this.getReferenceUnsafeStaticCast(), player, "call_mount");
 
+		player->addPendingTask("call_mount", callMount, 60 * 1000);
+		player->sendSystemMessage("Generating vehicle in 60 seconds. Combat will terminate vehicle generation.");
+
+		if (vehicleControlObserver == nullptr) {
+			vehicleControlObserver = new VehicleControlObserver(_this.getReferenceUnsafeStaticCast());
+			vehicleControlObserver->deploy();
+		}
+
+		player->registerObserver(ObserverEventType::STARTCOMBAT, vehicleControlObserver);
+	} else {
 		Locker clocker(controlledObject, player);
 		spawnObject(player);
 	}
@@ -117,6 +135,12 @@ void VehicleControlDeviceImplementation::spawnObject(CreatureObject* player) {
 
 	if (player->getParent() != nullptr || player->isInCombat()) {
 		player->sendSystemMessage("@pet/pet_menu:cant_call_vehicle"); // You can only unpack vehicles while Outside and not in Combat.
+		return;
+	}
+
+	if (player->isSwimming())
+	{
+		player->sendSystemMessage("You are unable to call a vehicle while simming.");
 		return;
 	}
 
@@ -178,7 +202,7 @@ void VehicleControlDeviceImplementation::storeObject(CreatureObject* player, boo
 	/*if (!controlledObject->isInQuadTree())
 		return;*/
 
-	if (!force && (player->isInCombat() || player->isDead()))
+	if (!force && player->isDead())
 		return;
 
 	if (player->isRidingMount() && player->getParent() == controlledObject) {

@@ -258,9 +258,26 @@ void ResourceSpawnImplementation::decreaseContainerReferenceCount() {
 		dbDestroyed = true;
 	}*/
 }
+
 void ResourceSpawnImplementation::addStatsToDeedListBox(SuiListBox* suil) {
 	suil->setPromptTitle("@veteran:resource_name"); //Resource Name
 	suil->setPromptText("@veteran:confirm_choose_type"); //Please confirm that you would like to select this resource as your Veteran Reward Crate of Resources. Use the CANCEL button to go back and select a different resource.
+
+	String tempname = "Name = " + spawnName;
+	suil->addMenuItem(tempname);
+
+	for (int i = 0; i < spawnAttributes.size(); ++i) {
+		String attrib;
+		int value = getAttributeAndValue(attrib, i);
+
+		String tempstat = "@obj_attr_n:" + attrib + " = " + value;
+		suil->addMenuItem(tempstat);
+	}
+}
+
+void ResourceSpawnImplementation::addStatsToDeedListBoxCR(SuiListBox* suil) {
+	suil->setPromptTitle("Resource List");
+	suil->setPromptText("Here are the stats:");
 
 	String tempname = "Name = " + spawnName;
 	suil->addMenuItem(tempname);

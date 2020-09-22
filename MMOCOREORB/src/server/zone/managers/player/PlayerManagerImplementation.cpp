@@ -107,8 +107,6 @@
 #include "server/zone/managers/frs/FrsManager.h"
 #include "server/zone/objects/player/events/OnlinePlayerLogTask.h"
 #include <sys/stat.h>
-#include "server/zone/objects/transaction/TransactionLog.h"
-#include "server/zone/objects/creature/commands/TransferItemMiscCommand.h"
 
 PlayerManagerImplementation::PlayerManagerImplementation(ZoneServer* zoneServer, ZoneProcessServer* impl,
 					bool trackOnlineUsers) : Logger("PlayerManager") {
@@ -1191,14 +1189,40 @@ void PlayerManagerImplementation::killPlayer(TangibleObject* attacker, CreatureO
 	player->sendSystemMessage(stringId);
 
 	player->updateTimeOfDeath();
-	player->clearBuffs(true, false);
 
+	CreatureObject* attackerCreature = attacker->asCreatureObject();
 	PlayerObject* ghost = player->getPlayerObject();
+	if ((attackerCreature->isPlayerCreature()) && (!CombatManager::instance()->areInDuel(attackerCreature, player)))
+	{
+		player->clearBuffs(true, false);
+
+		StringBuffer msg;
+		if (player->getCityRegion() == nullptr)
+		{
+			msg << "\\#FFFFFF" << (attackerCreature->isImperial() ? "[IMP] " : (attackerCreature->isRebel() ? "[REB] " : "")) << attackerCreature->getFirstName() << " has just \\#FF0000 slain \\#FFFFFF" << (player->isImperial() ? "[IMP] " : (player->isRebel() ? "[REB] " : "")) << player->getFirstName() << ", on planet " << player->getZone()->getZoneName();
+		}
+		else
+		{
+			ManagedReference<CityRegion*> city = player->getCityRegion().get();
+
+			String cityName = city->getRegionName();
+			cityName = cityName.subString(cityName.lastIndexOf(':') + 1);
+
+			msg << "\\#FFFFFF" << (attackerCreature->isImperial() ? "[IMP] " : (attackerCreature->isRebel() ? "[REB] " : "")) << attackerCreature->getFirstName() << " has just \\#FF0000 slain \\#FFFFFF" << (player->isImperial() ? "[IMP] " : (player->isRebel() ? "[REB] " : "")) << player->getFirstName() << " in " << cityName << ", on planet " << player->getZone()->getZoneName();
+		}
+
+		ChatManager* chatManager = processor->getZoneServer()->getChatManager();
+		chatManager->broadcastGalaxy(NULL, msg.toString());
+	}
+	else if (ghost->hasPvpTef())
+	{
+		player->clearBuffs(true, false);
+	}
 
 	if (ghost != nullptr) {
 		ghost->resetIncapacitationTimes();
-		if (ghost->hasTef()) {
-			ghost->schedulePvpTefRemovalTask(true, true, true);
+		if (ghost->hasPvpTef()) {
+			ghost->schedulePvpTefRemovalTask(true, true);
 		}
 	}
 
@@ -1206,8 +1230,6 @@ void PlayerManagerImplementation::killPlayer(TangibleObject* attacker, CreatureO
 
 	if (attacker->getFaction() != 0) {
 		if (attacker->isPlayerCreature() || attacker->isPet()) {
-			CreatureObject* attackerCreature = attacker->asCreatureObject();
-
 			if (attackerCreature->isPet()) {
 				CreatureObject* owner = attackerCreature->getLinkedCreature().get();
 
@@ -1723,13 +1745,18 @@ void PlayerManagerImplementation::disseminateExperience(TangibleObject* destruct
 			uint32 combatXp = 0;
 
 			Locker crossLocker(attacker, destructedObject);
-
+			float xpAmountTotal = 0;
 			for (int j = 0; j < entry->size(); ++j) {
-				uint32 damage = entry->elementAt(j).getValue();
 				String xpType = entry->elementAt(j).getKey();
-				float xpAmount = baseXp;
+				float xpAmount = ((baseXp / threatMap->size()) / entry->size()); // Split XP evenly per attacker and split XP evenly between weapon types
 
-				xpAmount *= (float) damage / totalDamage;
+				if (threatMap->size() > 0) // Grant multiplicative 15% XP bonus per attacker
+				{
+					for (int g = 1; g < threatMap->size(); g++)
+					{
+						xpAmount = ((double)xpAmount * 1.15);
+					}
+				}
 
 				//Cap xp based on level
 				xpAmount = Math::min(xpAmount, calculatePlayerLevel(attacker, xpType) * 300.f);
@@ -1743,12 +1770,36 @@ void PlayerManagerImplementation::disseminateExperience(TangibleObject* destruct
 
 				//Jedi experience doesn't count towards combat experience, and is earned at 20% the rate of normal experience
 				if (xpType != "jedi_general")
+				{
 					combatXp += xpAmount;
+				}
 				else
+				{
 					xpAmount *= 0.2f;
+				}
+
+				// Combat related XP reduction
+				if (globalExpMultiplier > 1.0)
+				{
+					if ((xpType == "jedi_general") ||
+							(xpType == "combat_general") ||
+							(xpType == "combat_meleespecialize_unarmed") ||
+							(xpType == "combat_meleespecialize_onehand") ||
+							(xpType == "combat_meleespecialize_twohand") ||
+							(xpType == "combat_meleespecialize_polearm") ||
+							(xpType == "combat_rangedspecialize_rifle") ||
+							(xpType == "combat_rangedspecialize_pistol") ||
+							(xpType == "combat_rangedspecialize_carbine") ||
+							(xpType == "combat_rangedspecialize_heavy"))
+					{
+						xpAmount = ((float)xpAmount * (1.0F / globalExpMultiplier)); // Reset to 1x XP
+					}
+				}
 
 				//Award individual expType
 				awardExperience(attacker, xpType, xpAmount);
+
+				xpAmountTotal += xpAmount;
 			}
 
 			combatXp = awardExperience(attacker, "combat_general", combatXp, true, 0.1f);
@@ -1768,9 +1819,10 @@ void PlayerManagerImplementation::disseminateExperience(TangibleObject* destruct
 
 			Locker squadLock(groupLeader, destructedObject);
 
-			//If he is a squad leader, and is in range of this player, then add the combat exp for him to use.
-			if (groupLeader->hasSkill("outdoors_squadleader_novice") && pos.distanceTo(attacker->getWorldPosition()) <= ZoneServer::CLOSEOBJECTRANGE) {
-				int v = slExperience.get(groupLeader) + combatXp;
+			//If he is a squad leader
+			if (groupLeader->hasSkill("outdoors_squadleader_novice"))
+			{
+				int v = slExperience.get(groupLeader) + (xpAmountTotal * 0.1);
 				slExperience.put(groupLeader, v);
 			}
 		}
@@ -2017,8 +2069,7 @@ void PlayerManagerImplementation::setExperienceMultiplier(float globalMultiplier
 	playerManager->awardExperience(playerCreature, "resource_harvesting_inorganic", 500);
  *
  */
-int PlayerManagerImplementation::awardExperience(CreatureObject* player, const String& xpType,
-		int amount, bool sendSystemMessage, float localMultiplier, bool applyModifiers) {
+int PlayerManagerImplementation::awardExperience(CreatureObject* player, const String& xpType, int amount, bool sendSystemMessage, float localMultiplier, bool applyModifiers) {
 
 	PlayerObject* playerObject = player->getPlayerObject();
 
@@ -2035,12 +2086,18 @@ int PlayerManagerImplementation::awardExperience(CreatureObject* player, const S
 	if (player->hasBuff(BuffCRC::FOOD_XP_INCREASE) && !player->containsActiveSession(SessionFacadeType::CRAFTING))
 		buffMultiplier += player->getSkillModFromBuffs("xp_increase") / 100.f;
 
-	int xp = 0;
+	int xpToGive = 0;
 
-	if (applyModifiers)
-		xp = playerObject->addExperience(xpType, (int) (amount * speciesModifier * buffMultiplier * localMultiplier * globalExpMultiplier));
+	if (amount > 0)
+	{
+		xpToGive = (applyModifiers ? (amount * speciesModifier * buffMultiplier * localMultiplier * globalExpMultiplier) : (amount));
+	}
 	else
-		xp = playerObject->addExperience(xpType, (int)amount);
+	{
+		xpToGive = amount;
+	}
+
+	int xp = playerObject->addExperience(xpType, xpToGive);
 
 	player->notifyObservers(ObserverEventType::XPAWARDED, player, xp);
 
@@ -2056,6 +2113,158 @@ int PlayerManagerImplementation::awardExperience(CreatureObject* player, const S
 			message.setTO("exp_n", xpType);
 			player->sendSystemMessage(message);
 		}
+	}
+
+	if ((amount > 0) && (xp < xpToGive) && (player->hasSkill("force_title_jedi_novice"))) // Over flow XP auto-conversion to Force Sensitive XP
+	{
+		xpToGive -= xp;
+		int fsXP = 0;
+		int fsXPGiven = 0;
+		bool fsXPAwarded = false;
+
+		// fs_combat && fs_reflex
+		if (xpType == "bountyhunter")
+		{
+			fsXP = ((double)xpToGive / 5.0);
+			fsXPGiven = playerObject->addExperience("fs_combat", (fsXP * 0.5));
+			if (fsXPGiven > 0) fsXPAwarded = true;
+
+			fsXP -= fsXPGiven; // if combat XP is capped, give as reflex
+
+			fsXPGiven = playerObject->addExperience("fs_reflex", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if (xpType == "combat_general")
+		{
+			fsXP = ((double)xpToGive / 3.0);
+			fsXPGiven = playerObject->addExperience("fs_combat", (fsXP * 0.5));
+			if (fsXPGiven > 0) fsXPAwarded = true;
+
+			fsXP -= fsXPGiven; // if combat XP is capped, give as reflex
+
+			fsXPGiven = playerObject->addExperience("fs_reflex", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if (	(xpType == "combat_meleespecialize_onehand") ||
+							(xpType == "combat_meleespecialize_polearm") ||
+							(xpType == "combat_meleespecialize_twohand") ||
+							(xpType == "combat_meleespecialize_unarmed") ||
+							(xpType == "combat_rangedspecialize_carbine") ||
+							(xpType == "combat_rangedspecialize_heavy") ||
+							(xpType == "combat_rangedspecialize_pistol") ||
+							(xpType == "combat_rangedspecialize_rifle"))
+		{
+			fsXP = ((double)xpToGive / 30.0);
+			fsXPGiven = playerObject->addExperience("fs_combat", (fsXP * 0.5));
+			if (fsXPGiven > 0) fsXPAwarded = true;
+
+			fsXP -= fsXPGiven; // if combat XP is capped, give as reflex
+
+			fsXPGiven = playerObject->addExperience("fs_reflex", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if (xpType == "squadleader")
+		{
+			fsXP = ((double)xpToGive / 90.0);
+			fsXPGiven = playerObject->addExperience("fs_combat", (fsXP * 0.5));
+			if (fsXPGiven > 0) fsXPAwarded = true;
+
+			fsXP -= fsXPGiven; // if combat XP is capped, give as reflex
+
+			fsXPGiven = playerObject->addExperience("fs_reflex", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+
+		// fs_senses
+		else if ((xpType == "bio_engineer_dna_harvesting") ||
+		(xpType == "slicing") ||
+		(xpType == "political")
+	)
+		{
+			fsXP = ((double)xpToGive / 3.0);
+			fsXPGiven = playerObject->addExperience("fs_senses", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if (xpType == "camp")
+		{
+			fsXP = ((double)xpToGive / 5.0);
+			fsXPGiven = playerObject->addExperience("fs_senses", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if (xpType == "creaturehandler")
+		{
+			fsXP = ((double)xpToGive / 9.0);
+			fsXPGiven = playerObject->addExperience("fs_senses", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if (	(xpType == "dance") ||
+							(xpType == "entertainer_healing") ||
+							(xpType == "medical") ||
+							(xpType == "music") ||
+							(xpType == "resource_harvesting_inorganic"))
+		{
+			fsXP = ((double)xpToGive / 10.0);
+			fsXPGiven = playerObject->addExperience("fs_senses", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if (xpType == "imagedesigner")
+		{
+			fsXP = ((double)xpToGive / 7.0);
+			fsXPGiven = playerObject->addExperience("fs_senses", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if (xpType == "merchant")
+		{
+			fsXP = ((double)xpToGive / 4.0);
+			fsXPGiven = playerObject->addExperience("fs_senses", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if (xpType ==  "scout")
+		{
+			fsXP = ((double)xpToGive / 8.0);
+			fsXPGiven = playerObject->addExperience("fs_senses", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if (xpType == "trapping")
+		{
+			fsXP = ((double)xpToGive / 25.0);
+			fsXPGiven = playerObject->addExperience("fs_senses", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+
+		// fs_crafting
+		else if (xpType == "crafting_bio_engineer_creature")
+		{
+			fsXP = ((double)xpToGive / 4.0);
+			fsXPGiven = playerObject->addExperience("fs_crafting", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if ( (xpType == "crafting_clothing_armor") ||
+							(xpType == "crafting_clothing_general") ||
+							(xpType == "crafting_droid_general") ||
+							(xpType == "crafting_food_general") ||
+							(xpType == "crafting_medicine_general") ||
+							(xpType == "crafting_spice") ||
+							(xpType == "crafting_weapons_general"))
+		{
+			fsXP = ((double)xpToGive / 5.0);
+			fsXPGiven = playerObject->addExperience("fs_crafting", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if (xpType == "crafting_general")
+		{
+			fsXP = ((double)xpToGive / 8.0);
+			fsXPGiven = playerObject->addExperience("fs_crafting", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+		else if (xpType == "crafting_structure_general")
+		{
+			fsXP = ((double)xpToGive / 35.0);
+			fsXPGiven = playerObject->addExperience("fs_crafting", fsXP);
+			if (fsXPGiven > 0) fsXPAwarded = true;
+		}
+
+		if (fsXPAwarded) player->sendSystemMessage("Your overflow experience has been automatically converted into Force Sensitive experience.");
 	}
 
 	return xp;
@@ -2481,9 +2690,6 @@ void PlayerManagerImplementation::handleVerifyTradeMessage(CreatureObject* playe
 		return;
 	}
 
-	// Get a trx group to trace all trx's in this session
-	auto trxGroup = TransactionLog::getNewTrxGroup();
-
 	tradeContainer->setVerifiedTrade(true);
 
 	uint64 targID = tradeContainer->getTradeTargetPlayer();
@@ -2516,9 +2722,6 @@ void PlayerManagerImplementation::handleVerifyTradeMessage(CreatureObject* playe
 			for (int i = 0; i < tradeContainer->getTradeSize(); ++i) {
 				ManagedReference<SceneObject*> item = tradeContainer->getTradeItem(i);
 
-				TransactionLog trx(player, receiver, item, TrxCode::PLAYERTRADE);
-				trx.setTrxGroup(trxGroup);
-
 				if (item->isTangibleObject()) {
 					if (objectController->transferObject(item, receiverInventory, -1, true))
 						item->sendDestroyTo(player);
@@ -2534,29 +2737,18 @@ void PlayerManagerImplementation::handleVerifyTradeMessage(CreatureObject* playe
 			for (int i = 0; i < receiverTradeContainer->getTradeSize(); ++i) {
 				ManagedReference<SceneObject*> item = receiverTradeContainer->getTradeItem(i);
 
-				TransactionLog trx(receiver, player, item, TrxCode::PLAYERTRADE);
-				trx.setTrxGroup(trxGroup);
-
 				if (item->isTangibleObject()) {
-					if (objectController->transferObject(item, playerInventory, -1, true)) {
+					if (objectController->transferObject(item, playerInventory, -1, true))
 						item->sendDestroyTo(receiver);
-					} else {
-						trx.errorMessage() << "transferObject failed";
-					}
 				} else {
-					if (objectController->transferObject(item, playerDatapad, -1, true)) {
+					if (objectController->transferObject(item, playerDatapad, -1, true))
 						item->sendDestroyTo(receiver);
-					} else {
-						trx.errorMessage() << "transferObject failed";
-					}
 				}
 			}
 
 			uint32 giveMoney = tradeContainer->getMoneyToTrade();
 
 			if (giveMoney > 0) {
-				TransactionLog trx(player, receiver, TrxCode::PLAYERTRADE, giveMoney, true);
-				trx.setTrxGroup(trxGroup);
 				player->subtractCashCredits(giveMoney);
 				receiver->addCashCredits(giveMoney);
 			}
@@ -2564,8 +2756,6 @@ void PlayerManagerImplementation::handleVerifyTradeMessage(CreatureObject* playe
 			giveMoney = receiverTradeContainer->getMoneyToTrade();
 
 			if (giveMoney > 0) {
-				TransactionLog trx(receiver, player, TrxCode::PLAYERTRADE, giveMoney, true);
-				trx.setTrxGroup(trxGroup);
 				receiver->subtractCashCredits(giveMoney);
 				player->addCashCredits(giveMoney);
 			}
@@ -3531,8 +3721,6 @@ void PlayerManagerImplementation::lootAll(CreatureObject* player, CreatureObject
 	if (creatureInventory == nullptr)
 		return;
 
-	auto trxGroup = TransactionLog::getNewTrxGroup();
-
 	int cashCredits = ai->getCashCredits();
 
 	if (cashCredits > 0) {
@@ -3541,13 +3729,8 @@ void PlayerManagerImplementation::lootAll(CreatureObject* player, CreatureObject
 		if (luck > 0)
 			cashCredits += (cashCredits * luck) / 20;
 
-		{
-			TransactionLog trx(ai, player, TrxCode::NPCLOOTCLAIM, cashCredits, true);
-			trx.setTrxGroup(trxGroup);
-			trx.addState("srcDisplayedName", ai->getDisplayedName());
-			player->addCashCredits(cashCredits, true);
-			ai->clearCashCredits();
-		}
+		player->addCashCredits(cashCredits, true);
+		ai->clearCashCredits();
 
 		StringIdChatParameter param("base_player", "prose_coin_loot"); //You loot %DI credits from %TT.
 		param.setDI(cashCredits);
@@ -3570,13 +3753,15 @@ void PlayerManagerImplementation::lootAll(CreatureObject* player, CreatureObject
 		return;
 	}
 
+	StringBuffer args;
+	args << playerInventory->getObjectID() << " -1 0 0 0";
+
+	String stringArgs = args.toString();
+
 	for (int i = totalItems - 1; i >= 0; --i) {
 		SceneObject* object = creatureInventory->getContainerObject(i);
 
-		TransactionLog trx(ai, player, object, TrxCode::NPCLOOTCLAIM);
-		trx.setTrxGroup(trxGroup);
-
-		TransferItemMiscCommand::doTransferItemMisc(player, object, playerInventory, -1, trx);
+		player->executeObjectControllerAction(STRING_HASHCODE("transferitemmisc"), object->getObjectID(), stringArgs);
 	}
 
 	if (creatureInventory->getContainerObjectsSize() <= 0) {
@@ -5011,6 +5196,7 @@ void PlayerManagerImplementation::generateVeteranReward(CreatureObject* player) 
 	// Final check to see if milestone has already been claimed on any of the player's characters
 	// (prevent claiming while multi-logged)
 
+
 	bool milestoneClaimed = false;
 	if (!playerGhost->getChosenVeteranReward(rewardSession->getMilestone() ).isEmpty() )
 		milestoneClaimed = true;
@@ -5037,17 +5223,12 @@ void PlayerManagerImplementation::generateVeteranReward(CreatureObject* player) 
 		return;
 	}
 
-	{
-		TransactionLog trx(TrxCode::VETERANREWARD, player, rewardSceno);
-
-		// Transfer to player
-		if (!inventory->transferObject(rewardSceno, -1, false, true)) { // Allow overflow
-			trx.abort() << "Failed to transfer to player inventory";
-			player->sendSystemMessage("@veteran:reward_error"); //	The reward could not be granted.
-			rewardSceno->destroyObjectFromDatabase(true);
-			cancelVeteranRewardSession(player);
-			return;
-		}
+	// Transfer to player
+	if (!inventory->transferObject(rewardSceno, -1, false, true)) { // Allow overflow
+		player->sendSystemMessage("@veteran:reward_error"); //	The reward could not be granted.
+		rewardSceno->destroyObjectFromDatabase(true);
+		cancelVeteranRewardSession(player);
+		return;
 	}
 
 	inventory->broadcastObject(rewardSceno, true);
@@ -5057,6 +5238,7 @@ void PlayerManagerImplementation::generateVeteranReward(CreatureObject* player) 
 	GalaxyAccountInfo* accountInfo = account->getGalaxyAccountInfo(player->getZoneServer()->getGalaxyName());
 
 	accountInfo->addChosenVeteranReward(rewardSession->getMilestone(), reward.getTemplateFile());
+
 
 	cancelVeteranRewardSession(player);
 

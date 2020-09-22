@@ -210,7 +210,7 @@ void EntertainingSessionImplementation::addHealingXpGroup(int xp) {
 					String healxptype("entertainer_healing");
 
 					if (playerManager != nullptr)
-						playerManager->awardExperience(groupMember, healxptype, xp, true);
+						playerManager->awardExperience(groupMember, healxptype, (xp * 5), true);
 				}
 			}
 		} catch (Exception& e) {
@@ -519,7 +519,7 @@ void EntertainingSessionImplementation::stopDancing() {
 bool EntertainingSessionImplementation::canHealBattleFatigue() {
 	ManagedReference<CreatureObject*> entertainer = this->entertainer.get();
 
-	if(entertainer->getSkillMod("private_med_battle_fatigue") > 0)
+	if(entertainer->getSkillMod("private_med_battle_fatigue") > 0 || entertainer->getSkillMod("private_aggro_mod") > 0)
 		return true;
 	else
 		return false;
@@ -632,8 +632,8 @@ void EntertainingSessionImplementation::addEntertainerBuffDuration(CreatureObjec
 
 	buffDuration += duration;
 
-	if (buffDuration > (120.0f + (10.0f / 60.0f)) ) // 2 hrs 10 seconds
-		buffDuration = (120.0f + (10.0f / 60.0f)); // 2hrs 10 seconds
+	if (buffDuration > 220) // 3 hours 40 minutes
+		buffDuration = 220;
 
 	setEntertainerBuffDuration(creature, performanceType, buffDuration);
 }
@@ -927,6 +927,18 @@ void EntertainingSessionImplementation::activateEntertainerBuff(CreatureObject* 
 
 			Locker locker2(willBuff);
 			creature->addBuff(willBuff);
+
+			if (entertainer->hasSkill("social_dancer_master")) // Also add dancer buffs, if master dancer
+			{
+				uint32 mindBuffCRC = STRING_HASHCODE("performance_enhance_dance_mind");
+				oldBuff = cast<PerformanceBuff*>(creature->getBuff(mindBuffCRC));
+				if (oldBuff != nullptr && oldBuff->getBuffStrength() > buffStrength)
+					return;
+				ManagedReference<PerformanceBuff*> mindBuff = new PerformanceBuff(creature, mindBuffCRC, buffStrength, buffDuration * 60, PerformanceBuffType::DANCE_MIND);
+
+				Locker locker(mindBuff);
+				creature->addBuff(mindBuff);
+			}
 			break;
 		}
 		case PerformanceType::DANCE:
@@ -939,6 +951,24 @@ void EntertainingSessionImplementation::activateEntertainerBuff(CreatureObject* 
 
 			Locker locker(mindBuff);
 			creature->addBuff(mindBuff);
+
+			if (entertainer->hasSkill("social_musician_master")) // Also add music buffs, if master musician
+			{
+				uint32 focusBuffCRC = STRING_HASHCODE("performance_enhance_music_focus");
+				uint32 willBuffCRC = STRING_HASHCODE("performance_enhance_music_willpower");
+				oldBuff = cast<PerformanceBuff*>(creature->getBuff(focusBuffCRC));
+				if (oldBuff != nullptr && oldBuff->getBuffStrength() > buffStrength)
+					return;
+				ManagedReference<PerformanceBuff*> focusBuff = new PerformanceBuff(creature, focusBuffCRC, buffStrength, buffDuration * 60, PerformanceBuffType::MUSIC_FOCUS);
+				ManagedReference<PerformanceBuff*> willBuff = new PerformanceBuff(creature, willBuffCRC, buffStrength, buffDuration * 60, PerformanceBuffType::MUSIC_WILLPOWER);
+
+				Locker locker(focusBuff);
+				creature->addBuff(focusBuff);
+				locker.release();
+
+				Locker locker2(willBuff);
+				creature->addBuff(willBuff);
+			}
 			break;
 		}
 		}
@@ -1098,7 +1128,7 @@ void EntertainingSessionImplementation::awardEntertainerExperience() {
 			xpAmount = ceil(xpAmount * totalBonus);
 
 			if (playerManager != nullptr)
-				playerManager->awardExperience(player, xptype, xpAmount, true);
+				playerManager->awardExperience(player, xptype, (xpAmount * 5), true);
 
 			oldFlourishXp = flourishXp;
 			flourishXp = 0;
@@ -1110,7 +1140,7 @@ void EntertainingSessionImplementation::awardEntertainerExperience() {
 			String healxptype("entertainer_healing");
 
 			if (playerManager != nullptr)
-				playerManager->awardExperience(player, healxptype, healingXp, true);
+				playerManager->awardExperience(player, healxptype, (healingXp * 5), true);
 
 			healingXp = 0;
 		}

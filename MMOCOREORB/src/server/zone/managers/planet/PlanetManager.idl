@@ -130,7 +130,7 @@ class PlanetManager extends ManagedService implements Logger {
 	@reference
 	private native SceneObject loadSnapshotObject(WorldSnapshotNode node, WorldSnapshotIff wsiff, @dereferenced int totalObjects);
 	private native void loadSnapshotObjects();
-	private native void loadTravelFares();
+	protected native void loadTravelFares();
 
 	@local
 	private native void loadPlanetObjects(LuaObject lua);
@@ -153,7 +153,7 @@ class PlanetManager extends ManagedService implements Logger {
 		navMeshAreas.drop(name);
 	}
 
-	private native void loadLuaConfig();
+	protected native void loadLuaConfig();
 
 	public native void initializeTransientMembers();
 
@@ -187,10 +187,6 @@ class PlanetManager extends ManagedService implements Logger {
 	 */
 	@local
 	public native PlanetTravelPoint getNearestPlanetTravelPoint(@dereferenced final Vector3 position, float range = 16000.0);
-
-	@local
-	@dereferenced
-	public native Vector3 getRandomSpawnPoint();
 
 	public native boolean isSpawningPermittedAt(float x, float y, float margin = 0);
 

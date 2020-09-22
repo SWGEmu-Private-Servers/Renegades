@@ -114,9 +114,6 @@ class GroupObject extends SceneObject {
 		return groupMembers.size();
 	}
 
-	@dirty
-	public native int getNumberOfPlayerMembers();
-
 	@reference
 	@dirty
 	public CreatureObject getGroupMember(int index) {

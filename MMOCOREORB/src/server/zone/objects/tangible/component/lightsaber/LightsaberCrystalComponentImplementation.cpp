@@ -72,46 +72,57 @@ void LightsaberCrystalComponentImplementation::generateCrystalStats() {
 		return;
 	}
 
-	int minStat = crystalData->getMinHitpoints();
-	int maxStat = crystalData->getMaxHitpoints();
+	int minCondition = crystalData->getMinHitpoints();
+	int maxCondition = crystalData->getMaxHitpoints();
 
-	setMaxCondition(getRandomizedStat(minStat, maxStat, itemLevel));
+	if (color == 31)
+	{
+		int minDamage = crystalData->getMinDamage();
+		int maxDamage = crystalData->getMaxDamage();
+		int minWoundChance = crystalData->getMinWoundChance();
+		int maxWoundChance = crystalData->getMaxWoundChance();
+		float minForceCost = crystalData->getMinForceCost();
+		float maxForceCost = crystalData->getMaxForceCost();
+		float minAttackSpeed = crystalData->getMinAttackSpeed();
+		float maxAttackSpeed = crystalData->getMaxAttackSpeed();
 
-	if (color == 31) {
-		int minStat = crystalData->getMinDamage();
-		int maxStat = crystalData->getMaxDamage();
+		if (getCustomObjectName().toString().contains("(Exceptional)"))
+		{
+			minCondition *= 1.5;
+			maxCondition *= 2.5;
+			minDamage += 25;
+			maxDamage += 25;
+			minWoundChance += 25;
+			maxWoundChance += 25;
+			maxForceCost = -9.99;
+			minForceCost = -9.99;
+			minAttackSpeed -= 1;
+			maxAttackSpeed -= 1;
+		}
+		else if (getCustomObjectName().toString().contains("(Legendary)"))
+		{
+			minCondition *= 1.5;
+			maxCondition *= 2.5;
+			minDamage += 50;
+			maxDamage += 50;
+			minWoundChance += 50;
+			maxWoundChance += 50;
+			maxForceCost = -9.99;
+			minForceCost = -9.99;
+			minAttackSpeed = -2;
+			maxAttackSpeed = -2;
+		}
 
-		damage = getRandomizedStat(minStat, maxStat, itemLevel);
+		setMaxCondition(getRandomizedStat(minCondition, maxCondition, itemLevel));
 
-		minStat = crystalData->getMinHealthSac();
-		maxStat = crystalData->getMaxHealthSac();
+		damage = getRandomizedStat(minDamage, maxDamage, itemLevel);
+		woundChance = getRandomizedStat(minWoundChance, maxWoundChance, itemLevel);
+		floatForceCost = getRandomizedStat(minForceCost, maxForceCost, itemLevel);
+		attackSpeed = Math::getPrecision(getRandomizedStat(minAttackSpeed, maxAttackSpeed, itemLevel), 2);
 
-		sacHealth = getRandomizedStat(minStat, maxStat, itemLevel);
-
-		minStat = crystalData->getMinActionSac();
-		maxStat = crystalData->getMaxActionSac();
-
-		sacAction = getRandomizedStat(minStat, maxStat, itemLevel);
-
-		minStat = crystalData->getMinMindSac();
-		maxStat = crystalData->getMaxMindSac();
-
-		sacMind = getRandomizedStat(minStat, maxStat, itemLevel);
-
-		minStat = crystalData->getMinWoundChance();
-		maxStat = crystalData->getMaxWoundChance();
-
-		woundChance = getRandomizedStat(minStat, maxStat, itemLevel);
-
-		float minFloatStat = crystalData->getMinForceCost();
-		float maxFloatStat = crystalData->getMaxForceCost();
-
-		floatForceCost = getRandomizedStat(minFloatStat, maxFloatStat, itemLevel);
-
-		minFloatStat = crystalData->getMinAttackSpeed();
-		maxFloatStat = crystalData->getMaxAttackSpeed();
-
-		attackSpeed = Math::getPrecision(getRandomizedStat(minFloatStat, maxFloatStat, itemLevel), 2);
+		sacHealth = getRandomizedStat(0, 0, itemLevel);
+		sacAction = getRandomizedStat(0, 0, itemLevel);
+		sacMind = getRandomizedStat(0, 0, itemLevel);
 	}
 
 	quality = getCrystalQuality();
@@ -130,54 +141,57 @@ void LightsaberCrystalComponentImplementation::validateCrystalStats() {
 		return;
 	}
 
-	int minStat = crystalData->getMinHitpoints();
-	int maxStat = crystalData->getMaxHitpoints();
+	int minCondition = crystalData->getMinHitpoints();
+	int maxCondition = crystalData->getMaxHitpoints();
 
-	if (getMaxCondition() > maxStat || getMaxCondition() < minStat)
-		setMaxCondition(getRandomizedStat(minStat, maxStat, itemLevel));
+	if (color == 31)
+	{
+		int minDamage = crystalData->getMinDamage();
+		int maxDamage = crystalData->getMaxDamage();
+		int minWoundChance = crystalData->getMinWoundChance();
+		int maxWoundChance = crystalData->getMaxWoundChance();
+		float minForceCost = crystalData->getMinForceCost();
+		float maxForceCost = crystalData->getMaxForceCost();
+		float minAttackSpeed = crystalData->getMinAttackSpeed();
+		float maxAttackSpeed = crystalData->getMaxAttackSpeed();
 
-	if (color == 31) {
-		minStat = crystalData->getMinDamage();
-		maxStat = crystalData->getMaxDamage();
+		if (getCustomObjectName().toString().contains("(Exceptional)"))
+		{
+			minCondition *= 1.5;
+			maxCondition *= 2.5;
+			minDamage += 25;
+			maxDamage += 25;
+			minWoundChance += 25;
+			maxWoundChance += 25;
+			maxForceCost = -9.99;
+			minForceCost = -9.99;
+			minAttackSpeed -= 1;
+			maxAttackSpeed -= 1;
+		}
+		else if (getCustomObjectName().toString().contains("(Legendary)"))
+		{
+			minCondition *= 1.5;
+			maxCondition *= 2.5;
+			minDamage += 50;
+			maxDamage += 50;
+			minWoundChance += 50;
+			maxWoundChance += 50;
+			maxForceCost = -9.99;
+			minForceCost = -9.99;
+			minAttackSpeed = -2;
+			maxAttackSpeed = -2;
+		}
 
-		if (damage > maxStat || damage < minStat)
-			damage = getRandomizedStat(minStat, maxStat, itemLevel);
+		setMaxCondition(getRandomizedStat(minCondition, maxCondition, itemLevel));
 
-		minStat = crystalData->getMinHealthSac();
-		maxStat = crystalData->getMaxHealthSac();
+		damage = getRandomizedStat(minDamage, maxDamage, itemLevel);
+		woundChance = getRandomizedStat(minWoundChance, maxWoundChance, itemLevel);
+		floatForceCost = getRandomizedStat(minForceCost, maxForceCost, itemLevel);
+		attackSpeed = Math::getPrecision(getRandomizedStat(minAttackSpeed, maxAttackSpeed, itemLevel), 2);
 
-		if (sacHealth > maxStat || sacHealth < minStat)
-			sacHealth = getRandomizedStat(minStat, maxStat, itemLevel);
-
-		minStat = crystalData->getMinActionSac();
-		maxStat = crystalData->getMaxActionSac();
-
-		if (sacAction > maxStat || sacAction < minStat)
-			sacAction = getRandomizedStat(minStat, maxStat, itemLevel);
-
-		minStat = crystalData->getMinMindSac();
-		maxStat = crystalData->getMaxMindSac();
-
-		if (sacMind > maxStat || sacMind < minStat)
-			sacMind = getRandomizedStat(minStat, maxStat, itemLevel);
-
-		minStat = crystalData->getMinWoundChance();
-		maxStat = crystalData->getMaxWoundChance();
-
-		if (woundChance > maxStat || woundChance < minStat)
-			woundChance = getRandomizedStat(minStat, maxStat, itemLevel);
-
-		float minFloatStat = crystalData->getMinForceCost();
-		float maxFloatStat = crystalData->getMaxForceCost();
-
-		if (floatForceCost > maxFloatStat || floatForceCost < minFloatStat)
-			floatForceCost = getRandomizedStat(minFloatStat, maxFloatStat, itemLevel);
-
-		minFloatStat = crystalData->getMinAttackSpeed();
-		maxFloatStat = crystalData->getMaxAttackSpeed();
-
-		if (attackSpeed > maxFloatStat || attackSpeed < minFloatStat)
-			attackSpeed = Math::getPrecision(getRandomizedStat(minFloatStat, maxFloatStat, itemLevel), 2);
+		sacHealth = getRandomizedStat(0, 0, itemLevel);
+		sacAction = getRandomizedStat(0, 0, itemLevel);
+		sacMind = getRandomizedStat(0, 0, itemLevel);
 	}
 }
 
@@ -300,7 +314,7 @@ void LightsaberCrystalComponentImplementation::fillAttributeList(AttributeListMe
 				alm->insertAttribute("wpn_attack_cost_health", sacHealth);
 				alm->insertAttribute("wpn_attack_cost_action", sacAction);
 				alm->insertAttribute("wpn_attack_cost_mind", sacMind);
-				alm->insertAttribute("forcecost", (int)getForceCost());
+				alm->insertAttribute("forcecost", Math::getPrecision(getForceCost(), 2));
 
 				// For debugging
 				if (player->isPrivileged()) {

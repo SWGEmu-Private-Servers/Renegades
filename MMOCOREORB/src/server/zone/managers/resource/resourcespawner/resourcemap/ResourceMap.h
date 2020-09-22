@@ -135,6 +135,8 @@ public:
 	*/
 	void addToSuiListBox(SuiListBox* sui, const String& nodeName);
 
+		void addToSuiListBoxCR(SuiListBox* sui, const String& nodeName);
+
 	/**
 	 * This is very slow, only meant to be used sparingly as a way to search everything
 	 * @param subMap map to write into

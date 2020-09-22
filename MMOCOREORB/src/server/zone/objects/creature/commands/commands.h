@@ -838,8 +838,11 @@
 #include "InspacerrCommand.h"
 #include "RequestSpaceTrainerCommand.h"
 
+// Renegades Custom Commands
+#include "CheckResources.h"
+#include "RetrieveResources.h"
+
 
 
 
 #endif /* COMMANDSNEW_H_ */
-

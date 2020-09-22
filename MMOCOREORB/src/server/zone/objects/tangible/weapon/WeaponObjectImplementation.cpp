@@ -349,7 +349,7 @@ void WeaponObjectImplementation::fillAttributeList(AttributeListMessage* alm, Cr
 
 	// Force Cost
 	if (getForceCost() > 0)
-		alm->insertAttribute("forcecost", (int)getForceCost());
+		alm->insertAttribute("forcecost", Math::getPrecision(getForceCost(), 2));
 
 	for (int i = 0; i < getNumberOfDots(); i++) {
 
@@ -690,19 +690,19 @@ String WeaponObjectImplementation::repairAttempt(int repairChance) {
 	String message = "@error_message:";
 
 	if(repairChance < 25) {
-		message += "sys_repair_failed";
-		setMaxCondition(1, true);
-		setConditionDamage(0, true);
-	} else if(repairChance < 50) {
 		message += "sys_repair_imperfect";
-		setMaxCondition(getMaxCondition() * .65f, true);
+		setMaxCondition(getMaxCondition() * .75f, true);
 		setConditionDamage(0, true);
 	} else if(repairChance < 75) {
 		setMaxCondition(getMaxCondition() * .80f, true);
 		setConditionDamage(0, true);
 		message += "sys_repair_slight";
-	} else {
+	} else if(repairChance < 95) {
 		setMaxCondition(getMaxCondition() * .95f, true);
+		setConditionDamage(0, true);
+		message += "sys_repair_slight";
+	} else {
+		setMaxCondition(getMaxCondition() * .99f, true);
 		setConditionDamage(0, true);
 		message += "sys_repair_perfect";
 	}
@@ -715,7 +715,9 @@ void WeaponObjectImplementation::decay(CreatureObject* user) {
 		return;
 	}
 
-	int roll = System::random(100);
+	PlayerObject* ghost = user->getPlayerObject();
+	int roll = System::random(100 + user->getSkillMod("luck") + (ghost->isJedi() ? user->getSkillMod("force_luck") : 0));
+
 	int chance = 5;
 
 	if (hasPowerup())
@@ -730,13 +732,13 @@ void WeaponObjectImplementation::decay(CreatureObject* user) {
 			if (saberInv == nullptr)
 				return;
 
-			// TODO: is this supposed to be every crystal, or random crystal(s)?
-			for (int i = 0; i < saberInv->getContainerObjectsSize(); i++) {
-				ManagedReference<LightsaberCrystalComponent*> crystal = saberInv->getContainerObject(i).castTo<LightsaberCrystalComponent*>();
+			// Randomly pick one crystal to deal damage to
+			int rndIndex = System::random(saberInv->getContainerObjectsSize() - 1);
+			ManagedReference<LightsaberCrystalComponent*> crystal = saberInv->getContainerObject(rndIndex).castTo<LightsaberCrystalComponent*>();
 
-				if (crystal != nullptr) {
-					crystal->inflictDamage(crystal, 0, 1, true, true);
-				}
+			if (crystal != nullptr)
+			{
+				crystal->inflictDamage(crystal, 0, 1, true, true);
 			}
 		} else {
 			inflictDamage(_this.getReferenceUnsafeStaticCast(), 0, 1, true, true);

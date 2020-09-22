@@ -94,6 +94,12 @@ public:
 
 		Locker _lock(targetCreature, creature);
 
+		if (targetCreature->isRidingMount())
+		{
+			targetCreature->updateCooldownTimer("mount_dismount", 0);
+			targetCreature->executeObjectControllerAction(STRING_HASHCODE("dismount"));
+		}
+
 		targetCreature->switchZone(planetName, x, z, y, parentID);
 
 		return SUCCESS;

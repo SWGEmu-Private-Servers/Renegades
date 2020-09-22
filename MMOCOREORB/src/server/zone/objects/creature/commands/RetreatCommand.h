@@ -93,6 +93,12 @@ public:
 			if (!isValidGroupAbilityTarget(creature, member, false))
 				continue;
 
+			PlayerObject* ghost = member->getPlayerObject().get();
+			if (ghost->hasPvpTef()) // No burst run for members who are PvPing
+			{
+				continue;
+			}
+
 			Locker clocker(member, player);
 
 			sendCombatSpam(member);

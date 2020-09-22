@@ -27,43 +27,47 @@ int DestroyStructureSessionImplementation::initializeSession() {
 
 	Locker _lock(structureObject, creatureObject);
 
-	CreatureObject* player = cast<CreatureObject*>( creatureObject.get());
+	if (structureObject->isRedeedable()) {
+		destroyStructure();
+		return 0;
+	} else {
+		CreatureObject* player = cast<CreatureObject*>( creatureObject.get());
+		String no = "\\#FF6347 @player_structure:can_redeed_no_suffix \\#.";
+		String yes = "\\#32CD32 @player_structure:can_redeed_yes_suffix \\#.";
 
-	String no = "\\#FF6347 @player_structure:can_redeed_no_suffix \\#.";
-	String yes = "\\#32CD32 @player_structure:can_redeed_yes_suffix \\#.";
+		String redeed = (structureObject->isRedeedable()) ? yes : no;
 
-	String redeed = (structureObject->isRedeedable()) ? yes : no;
+		StringBuffer maint;
+		maint << "@player_structure:redeed_maintenance \\#" << ((structureObject->isRedeedable()) ? "32CD32 " : "FF6347 ") << structureObject->getSurplusMaintenance() << "/" << structureObject->getRedeedCost() << "\\#.";
 
-	StringBuffer maint;
-	maint << "@player_structure:redeed_maintenance \\#" << ((structureObject->isRedeedable()) ? "32CD32 " : "FF6347 ") << structureObject->getSurplusMaintenance() << "/" << structureObject->getRedeedCost() << "\\#.";
+		StringBuffer entry;
+		entry << "@player_structure:confirm_destruction_d1 ";
+		entry << "@player_structure:confirm_destruction_d2 \n\n";
+		entry << "@player_structure:confirm_destruction_d3a ";
+		entry << "\\#32CD32 @player_structure:confirm_destruction_d3b \\#. ";
+		entry << "@player_structure:confirm_destruction_d4 \n";
+		entry << "@player_structure:redeed_confirmation " << redeed;
 
-	StringBuffer entry;
-	entry << "@player_structure:confirm_destruction_d1 ";
-	entry << "@player_structure:confirm_destruction_d2 \n\n";
-	entry << "@player_structure:confirm_destruction_d3a ";
-	entry << "\\#32CD32 @player_structure:confirm_destruction_d3b \\#. ";
-	entry << "@player_structure:confirm_destruction_d4 \n";
-	entry << "@player_structure:redeed_confirmation " << redeed;
+		StringBuffer cond;
+		cond << "@player_structure:redeed_condition \\#32CD32 " << (structureObject->getMaxCondition() - structureObject->getConditionDamage()) << "/" << structureObject->getMaxCondition() << "\\#.";
 
-	StringBuffer cond;
-	cond << "@player_structure:redeed_condition \\#32CD32 " << (structureObject->getMaxCondition() - structureObject->getConditionDamage()) << "/" << structureObject->getMaxCondition() << "\\#.";
+		ManagedReference<SuiListBox*> sui = new SuiListBox(player);
+		sui->setCallback(new DestroyStructureRequestSuiCallback(creatureObject->getZoneServer()));
+		sui->setCancelButton(true, "@no");
+		sui->setOkButton(true, "@yes");
+		sui->setUsingObject(structureObject);
+		sui->setPromptTitle(structureObject->getDisplayedName());
+		sui->setPromptText(entry.toString());
 
-	ManagedReference<SuiListBox*> sui = new SuiListBox(player);
-	sui->setCallback(new DestroyStructureRequestSuiCallback(creatureObject->getZoneServer()));
-	sui->setCancelButton(true, "@no");
-	sui->setOkButton(true, "@yes");
-	sui->setUsingObject(structureObject);
-	sui->setPromptTitle(structureObject->getDisplayedName());
-	sui->setPromptText(entry.toString());
+		sui->addMenuItem("@player_structure:can_redeed_alert " + redeed);
+		sui->addMenuItem(cond.toString());
+		sui->addMenuItem(maint.toString());
 
-	sui->addMenuItem("@player_structure:can_redeed_alert " + redeed);
-	sui->addMenuItem(cond.toString());
-	sui->addMenuItem(maint.toString());
+		player->getPlayerObject()->addSuiBox(sui);
+		player->sendMessage(sui->generateMessage());
 
-	player->getPlayerObject()->addSuiBox(sui);
-	player->sendMessage(sui->generateMessage());
-
-	return 0;
+		return 0;
+	}
 }
 
 int DestroyStructureSessionImplementation::sendDestroyCode() {

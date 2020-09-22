@@ -20,7 +20,6 @@
 #include "APIProxyChatManager.h"
 #include "APIProxyObjectManager.h"
 #include "APIProxyGuildManager.h"
-#include "APIProxyConfigManager.h"
 
 using namespace server::web3;
 
@@ -90,15 +89,6 @@ void RESTServer::registerEndpoints() {
 		mObjectManagerProxy->handle(apiRequest);
 	}));
 
-	addEndpoint(RESTEndpoint("(?:PUT):/v1/object/(\\d+)/(\\w+)/(\\w+)/", {"oid", "class", "property"}, [this] (APIRequest& apiRequest) -> void {
-		mObjectManagerProxy->handle(apiRequest);
-	}));
-
-	addEndpoint(RESTEndpoint("(?:GET|POST|PUT):/v1/admin/config/(?:(.*)/|)", {"key"}, [this] (APIRequest& apiRequest) -> void {
-		mConfigManagerProxy->handle(apiRequest);
-	}));
-
-
 	addEndpoint(RESTEndpoint("POST:/v1/admin/console/(\\w+)/", {"command"}, [this] (APIRequest& apiRequest) -> void {
 		StringBuffer buf;
 
@@ -147,7 +137,7 @@ void RESTServer::registerEndpoints() {
 void RESTServer::routeRequest(http_request& request) {
 	const auto& uri = request.relative_uri();
 
-	String endpointKey = request.method() + ":" + uri::decode(uri.path());
+	String endpointKey = request.method() + ":" + uri.path();
 
 	if (!endpointKey.endsWith("/")) {
 		endpointKey += "/";
@@ -270,12 +260,6 @@ void RESTServer::createProxies() {
 	if (mGuildManagerProxy == nullptr) {
 		throw OutOfMemoryError();
 	}
-
-	mConfigManagerProxy = new APIProxyConfigManager();
-
-	if (mConfigManagerProxy == nullptr) {
-		throw OutOfMemoryError();
-	}
 }
 
 void RESTServer::destroyProxies() {
@@ -297,11 +281,6 @@ void RESTServer::destroyProxies() {
 	if (mGuildManagerProxy != nullptr) {
 		delete mGuildManagerProxy;
 		mGuildManagerProxy = nullptr;
-	}
-
-	if (mConfigManagerProxy != nullptr) {
-		delete mConfigManagerProxy;
-		mConfigManagerProxy = nullptr;
 	}
 }
 

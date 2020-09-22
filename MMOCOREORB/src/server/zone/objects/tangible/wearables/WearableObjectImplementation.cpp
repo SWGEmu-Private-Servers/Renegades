@@ -103,6 +103,7 @@ void WearableObjectImplementation::generateSockets(CraftingValues* craftingValue
 
 	int skill = 0;
 	int luck = 0;
+	int force_luck = 0;
 
 	if (craftingValues != nullptr) {
 		ManagedReference<ManufactureSchematic*> manuSchematic = craftingValues->getManufactureSchematic();
@@ -110,11 +111,12 @@ void WearableObjectImplementation::generateSockets(CraftingValues* craftingValue
 			ManagedReference<DraftSchematic*> draftSchematic = manuSchematic->getDraftSchematic();
 			ManagedReference<CreatureObject*> player = manuSchematic->getCrafter().get();
 
-			if (player != nullptr && draftSchematic != nullptr) {
+			if (player != nullptr && draftSchematic != nullptr)
+			{
+				force_luck = player->getSkillMod("force_luck");
 				String assemblySkill = draftSchematic->getAssemblySkill();
 				skill = player->getSkillMod(assemblySkill) * 2.5; // 0 to 250 max
-				luck = System::random(player->getSkillMod("luck")
-						+ player->getSkillMod("force_luck"));
+				luck = System::random(player->getSkillMod("luck"));
 			}
 		}
 	}
@@ -124,6 +126,8 @@ void WearableObjectImplementation::generateSockets(CraftingValues* craftingValue
 	float roll = System::random(skill + luck + random);
 
 	int generatedCount = int(float(MAXSOCKETS * roll) / float(MAXSOCKETS * 100));
+
+	generatedCount += (force_luck / 4) * 2; // Force Luck grants up to 2 sockets guaranteed
 
 	if (generatedCount > MAXSOCKETS)
 		generatedCount = MAXSOCKETS;
@@ -148,56 +152,79 @@ int WearableObjectImplementation::socketsUsed() const {
 	}
 }
 
-void WearableObjectImplementation::applyAttachment(CreatureObject* player,
-		Attachment* attachment) {
-	if (!isASubChildOf(player))
-		return;
+void WearableObjectImplementation::applyAttachment(CreatureObject* player, Attachment* attachment)
+{
+	if (!isASubChildOf(player)) return;
 
-	if (socketsLeft() > 0) {
+	if (wearableSkillMods.size() < 6)
+	{
 		Locker locker(player);
 
-		if (isEquipped()) {
+		if (isEquipped())
+		{
 			removeSkillModsFrom(player);
 		}
 
-		if (wearableSkillMods.size() < 6) {
-			HashTable<String, int>* mods = attachment->getSkillMods();
-			HashTableIterator<String, int> iterator = mods->iterator();
+		bool usedSocket = false;
+		bool consumedTape = false;
 
-			String statName;
-			int newValue;
+		HashTable<String, int>* mods = attachment->getSkillMods();
+		HashTableIterator<String, int> iterator = mods->iterator();
 
-			SortedVector< ModSortingHelper > sortedMods;
-			for( int i = 0; i < mods->size(); i++){
-				iterator.getNextKeyAndValue(statName, newValue);
-				sortedMods.put( ModSortingHelper( statName, newValue));
+		String statName;
+		int newValue;
+
+		SortedVector< ModSortingHelper > sortedMods;
+		for( int i = 0; i < mods->size(); i++)
+		{
+			iterator.getNextKeyAndValue(statName, newValue);
+			sortedMods.put(ModSortingHelper(statName, newValue));
+		}
+
+		// Select the next mod in the SEA, sorted high-to-low. If that skill mod is already on the
+		// wearable, with higher or equal value, don't apply and continue. Break once one mod
+		// is applied.
+		for( int i = 0; i < sortedMods.size(); i++ )
+		{
+			String modName = sortedMods.elementAt(i).getKey();
+			int modValue = sortedMods.elementAt(i).getValue();
+
+			int existingValue = -26;
+			if(wearableSkillMods.contains(modName))
+			{
+				existingValue = wearableSkillMods.get(modName);
 			}
 
-			// Select the next mod in the SEA, sorted high-to-low. If that skill mod is already on the
-			// wearable, with higher or equal value, don't apply and continue. Break once one mod
-			// is applied.
-			for( int i = 0; i < sortedMods.size(); i++ ) {
-				String modName = sortedMods.elementAt(i).getKey();
-				int modValue = sortedMods.elementAt(i).getValue();
-
-				int existingValue = -26;
-				if(wearableSkillMods.contains(modName))
-					existingValue = wearableSkillMods.get(modName);
-
-				if( modValue > existingValue) {
-					wearableSkillMods.put( modName, modValue );
-					break;
-				}
+			if ((modValue > existingValue) && (wearableSkillMods.contains(modName))) // Replace
+			{
+				consumedTape = true;
+				wearableSkillMods.put(modName, modValue);
+				break;
+			}
+			else if ((existingValue == -26) && (socketsLeft() > 0)) // New
+			{
+				consumedTape = true;
+				usedSocket = true;
+				wearableSkillMods.put(modName, modValue);
+				break;
 			}
 		}
 
-		usedSocketCount++;
-		addMagicBit(true);
-		Locker clocker(attachment, player);
-		attachment->destroyObjectFromWorld(true);
-		attachment->destroyObjectFromDatabase(true);
+		if (usedSocket)
+		{
+			usedSocketCount++;
+		}
 
-		if (isEquipped()) {
+		if (consumedTape)
+		{
+			addMagicBit(true);
+			Locker clocker(attachment, player);
+			attachment->destroyObjectFromWorld(true);
+			attachment->destroyObjectFromDatabase(true);
+		}
+
+		if (isEquipped())
+		{
 			applySkillModsTo(player);
 		}
 	}
@@ -252,24 +279,19 @@ bool WearableObjectImplementation::isEquipped() {
 String WearableObjectImplementation::repairAttempt(int repairChance) {
 	String message = "@error_message:";
 
-	if(repairChance < 25) {
-		message += "sys_repair_failed";
-		setMaxCondition(1, true);
-		setConditionDamage(0, true);
-	} else if(repairChance < 50) {
+	if (repairChance < 25) {
 		message += "sys_repair_imperfect";
-		setMaxCondition(getMaxCondition() * .65f, true);
+		setMaxCondition(getMaxCondition() * .75f, true);
 		setConditionDamage(0, true);
-	} else if(repairChance < 75) {
-		setMaxCondition(getMaxCondition() * .80f, true);
+	} else if (repairChance < 75) {
+		setMaxCondition(getMaxCondition() * .95f, true);
 		setConditionDamage(0, true);
 		message += "sys_repair_slight";
 	} else {
-		setMaxCondition(getMaxCondition() * .95f, true);
+		setMaxCondition(getMaxCondition() * .99f, true);
 		setConditionDamage(0, true);
 		message += "sys_repair_perfect";
 	}
 
 	return message;
 }
-

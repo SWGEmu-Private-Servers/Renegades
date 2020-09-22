@@ -436,20 +436,6 @@ void GroupObjectImplementation::calcGroupLevel() {
 	broadcastMessage(msg);
 }
 
-int GroupObjectImplementation::getNumberOfPlayerMembers() {
-	int playerCount = 0;
-
-	for (int i = 0; i < getGroupSize(); i++) {
-		Reference<CreatureObject*> member = getGroupMember(i);
-
-		if (member->isPlayerCreature()) {
-			playerCount++;
-		}
-	}
-
-	return playerCount;
-}
-
 void GroupObjectImplementation::sendSystemMessage(StringIdChatParameter& param, bool sendLeader) {
 	Locker lock(_this.getReferenceUnsafeStaticCast());
 

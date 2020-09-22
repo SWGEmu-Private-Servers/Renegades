@@ -14,18 +14,32 @@ public:
 	: JediQueueCommand(name, server) {
 		// BuffCRC's, first one is used.
 		buffCRC = BuffCRC::JEDI_FORCE_RUN_1;
-    
+
         // If these are active they will block buff use
 		blockingCRCs.add(BuffCRC::JEDI_FORCE_RUN_2);
 		blockingCRCs.add(BuffCRC::JEDI_FORCE_RUN_3);
-    
-    
+
+
 		// Skill mods.
 		skillMods.put("force_run", 1);
 		skillMods.put("slope_move", 33);
 	}
 
 	int doQueueCommand(CreatureObject* creature, const uint64& target, const UnicodeString& arguments) const {
+		if (creature->hasBuff(BuffCRC::JEDI_FORCE_RUN_1)) // Allow removal of buff on second click
+		{
+			Buff* frBuff = creature->getBuff(BuffCRC::JEDI_FORCE_RUN_1);
+			Locker locker(frBuff);
+			creature->removeBuff(frBuff);
+			return -1;
+		}
+
+		if (!creature->checkCooldownRecovery("forcerun"))
+		{
+			creature->sendSystemMessage("You must wait before you can use that ability again.");
+			return -1;
+		}
+
 		int res = creature->hasBuff(buffCRC) ? NOSTACKJEDIBUFF : doJediSelfBuffCommand(creature);
 
 		if (res == NOSTACKJEDIBUFF) {

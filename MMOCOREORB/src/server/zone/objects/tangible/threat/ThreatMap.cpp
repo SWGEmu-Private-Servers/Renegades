@@ -35,7 +35,6 @@ void ThreatMapEntry::addDamage(String xp, uint32 damage) {
 void ThreatMapEntry::setThreatState(uint64 state) {
 	if(!(threatBitmask & state))
 		threatBitmask |= state;
-
 }
 
 bool ThreatMapEntry::hasState(uint64 state) {
@@ -166,7 +165,8 @@ bool ThreatMap::setThreatState(CreatureObject* target, uint64 state, uint64 dura
 
 	int idx = find(target);
 
-	if (idx == -1) {
+	if (idx == -1)
+	{
 		ThreatMapEntry entry;
 		entry.setThreatState(state);
 		put(target, entry);
@@ -386,17 +386,38 @@ CreatureObject* ThreatMap::getHighestThreatCreature() {
 
 	threatMatrix.clear();
 
+	int htt = 0;
+	int cThreat = 0;
+
 	for (int i = 0; i < size(); ++i) {
 		ThreatMapEntry* entry = &elementAt(i).getValue();
 		CreatureObject* creature = elementAt(i).getKey();
 
 		ManagedReference<CreatureObject*> selfStrong = cast<CreatureObject*>(self.get().get());
 
-		if (!creature->isDead() && !creature->isIncapacitated() && creature->isInRange(selfStrong, 128.f) && creature->isAttackableBy(selfStrong))
-			threatMatrix.add(creature, entry);
-	}
 
-	this->currentThreat = threatMatrix.getLargestThreat();
+		if (!creature->isDead() && !creature->isIncapacitated() && creature->isInRange(selfStrong, 128.f) && creature->isAttackableBy(selfStrong))
+		{
+			cThreat = entry->getTotalDamage();
+			cThreat += entry->getAggroMod();
+			cThreat += (entry->getHeal() * 2);
+
+			if (cThreat < 0) cThreat = 0;
+
+			if (this->currentThreat == nullptr)
+			{
+				this->currentThreat = creature;
+				htt = cThreat;
+			}
+			else if (cThreat > htt)
+			{
+				this->currentThreat = creature;
+				htt = cThreat;
+			}
+
+			threatMatrix.add(creature, entry);
+		}
+	}
 
 	cooldownTimerMap.updateToCurrentAndAddMili("doEvaluation", ThreatMap::EVALUATIONCOOLDOWN);
 	return this->currentThreat.get().get();

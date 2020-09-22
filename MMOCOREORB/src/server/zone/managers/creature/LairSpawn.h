@@ -23,6 +23,7 @@ namespace creature {
 		int numberToSpawn;
 		int weighting;
 		float size;
+		bool isLargePackSpawn;
 
 		String lairTemplateName;
 
@@ -34,6 +35,7 @@ namespace creature {
 			numberToSpawn = 0;
 			weighting = 1;
 			size = 25;
+			isLargePackSpawn = false;
 		}
 
 		LairSpawn(const LairSpawn& sp) : Object() {
@@ -71,6 +73,21 @@ namespace creature {
 			weighting = obj.getIntField("weighting");
 			size = obj.getFloatField("size");
 			lairTemplateName = obj.getStringField("lairTemplateName");
+		}
+
+		void setLargePack()
+		{
+			isLargePackSpawn = true;
+		}
+
+		bool isLargePack()
+		{
+			return isLargePackSpawn;
+		}
+
+		void setSpawnLimit(int n)
+		{
+			spawnLimit = n;
 		}
 
 		int getSpawnLimit() const {

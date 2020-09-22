@@ -21,5 +21,8 @@ class SpaceManager extends PlanetManager {
 
 	public void initialize() {
 		Logger.info("loading space manager " + super.zone.getZoneName());
+
+		loadLuaConfig();
+		loadTravelFares();
 	}
 }

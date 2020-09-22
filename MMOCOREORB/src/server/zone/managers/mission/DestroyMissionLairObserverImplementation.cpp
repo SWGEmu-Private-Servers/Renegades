@@ -6,6 +6,7 @@
 #include "server/zone/managers/creature/CreatureTemplateManager.h"
 #include "server/zone/managers/creature/LairAggroTask.h"
 #include "server/zone/objects/creature/ai/AiAgent.h"
+#include "server/zone/objects/tangible/LairObject.h"
 
 void DestroyMissionLairObserverImplementation::checkForHeal(TangibleObject* lair, TangibleObject* attacker, bool forceNewUpdate) {
 	if (getMobType() == LairTemplate::NPC)
@@ -28,6 +29,13 @@ bool DestroyMissionLairObserverImplementation::checkForNewSpawns(TangibleObject*
 		spawnLimitAdjustment = 3;
 	}
 
+	ManagedReference<LairObject*> lairObj = dynamic_cast<LairObject*>(lair);
+
+	if (lairObj->isLargePack())
+	{
+			spawnLimitAdjustment = lairObj->getSpawnBonus();
+	}
+
 	int spawnLimit = lairTemplate->getSpawnLimit() + spawnLimitAdjustment;
 
 	if (forceSpawn) {
@@ -41,40 +49,62 @@ bool DestroyMissionLairObserverImplementation::checkForNewSpawns(TangibleObject*
 		int conditionDamage = lair->getConditionDamage();
 		int maxCondition = lair->getMaxCondition();
 
-		switch (spawnNumber) {
-		case 0:
-			spawnNumber.increment();
-			break;
-		case 1:
-			if (conditionDamage > (maxCondition / 10)) {
-				spawnNumber.increment();
-			} else {
+		if (lairObj->isLargePack())
+		{
+			if (spawnNumber > (spawnLimit / 10)) // Spawning finished
+			{
 				return false;
 			}
-			break;
-		case 2:
-			if (conditionDamage > (maxCondition / 2)) {
-				spawnNumber.increment();
-			} else {
-				return false;
+			else // Keep spawning
+			{
+				if (conditionDamage > ((double)maxCondition * 0.1))
+				{
+					spawnNumber.increment();
+				}
+				else // Not ready yet
+				{
+					return false;
+				}
 			}
-			break;
-		case 3:
-			if (lairTemplate->hasBossMobs() && conditionDamage > ((maxCondition * 9) / 10)) {
+		}
+		else
+		{
+			switch (spawnNumber) {
+			case 0:
 				spawnNumber.increment();
-			} else {
+				break;
+			case 1:
+				if (conditionDamage > (maxCondition / 10)) {
+					spawnNumber.increment();
+				} else {
+					return false;
+				}
+				break;
+			case 2:
+				if (conditionDamage > (maxCondition / 2)) {
+					spawnNumber.increment();
+				} else {
+					return false;
+				}
+				break;
+			case 3:
+				if (lairTemplate->hasBossMobs() && conditionDamage > ((maxCondition * 9) / 10)) {
+					spawnNumber.increment();
+				} else {
+					return false;
+				}
+				break;
+			default:
 				return false;
+				break;
 			}
-			break;
-		default:
-			return false;
-			break;
 		}
 	}
 
 	VectorMap<String, int> objectsToSpawn; // String mobileTemplate, int number to spawn
 
-	if (spawnNumber == 4) {
+	if ((spawnNumber == 4) && (!lairObj->isLargePack()))
+	{
 		if (System::random(100) > 4)
 			return false;
 
@@ -88,14 +118,24 @@ bool DestroyMissionLairObserverImplementation::checkForNewSpawns(TangibleObject*
 		const Vector<String>* mobiles = lairTemplate->getWeightedMobiles();
 		int amountToSpawn = 0;
 
-		if (getMobType() == LairTemplate::CREATURE) {
-			amountToSpawn = spawnLimit / 3;
-		} else {
-			amountToSpawn = System::random(2) + (spawnLimit / 3);
-		}
+		if (!lairObj->isLargePack())
+		{
+			if (getMobType() == LairTemplate::CREATURE) {
+				amountToSpawn = spawnLimit / 3;
+			} else {
+				amountToSpawn = System::random(2) + (spawnLimit / 3);
+			}
 
-		if (amountToSpawn < 1)
-			amountToSpawn = 1;
+			if (amountToSpawn < 1)
+				amountToSpawn = 1;
+
+			if (amountToSpawn > 5)
+				amountToSpawn = 5;
+		}
+		else
+		{
+			amountToSpawn = 10;
+		}
 
 		for (int i = 0; i < amountToSpawn; i++) {
 			int num = System::random(mobiles->size() - 1);
@@ -172,11 +212,13 @@ bool DestroyMissionLairObserverImplementation::checkForNewSpawns(TangibleObject*
 		}
 	}
 
-	if (spawnNumber == 4) {
-		Reference<LairAggroTask*> task = new LairAggroTask(lair, attacker, _this.getReferenceUnsafeStaticCast(), true);
-		task->schedule(1000);
+	if (!lairObj->isLargePack())
+	{
+		if (spawnNumber == 4) {
+			Reference<LairAggroTask*> task = new LairAggroTask(lair, attacker, _this.getReferenceUnsafeStaticCast(), true);
+			task->schedule(1000);
+		}
 	}
 
 	return objectsToSpawn.size() > 0;
 }
-

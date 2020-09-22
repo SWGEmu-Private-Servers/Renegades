@@ -15,7 +15,6 @@ import server.zone.packets.chat.ChatInstantMessageToCharacter;
 import engine.log.Logger;
 import server.zone.objects.waypoint.WaypointObject;
 import server.chat.PendingMessageList;
-import server.chat.PersistentMessage;
 
 include server.zone.managers.player.PlayerMap;
 include server.chat.StringIdChatParameter;
@@ -24,7 +23,6 @@ include server.chat.WaypointChatParameterVector;
 include server.chat.room.ChatRoom;
 include server.chat.room.ChatRoomMap;
 include system.util.VectorMap;
-include system.lang.ref.Reference;
 
 @dirty
 class ChatManager extends ManagedService implements Logger {
@@ -43,6 +41,7 @@ class ChatManager extends ManagedService implements Logger {
 	ChatRoom guildRoom;
 	ChatRoom auctionRoom;
 	ChatRoom systemRoom;
+	ChatRoom renegadesRoom;
 
 	transient ChatRoomMap roomMap;
 
@@ -391,7 +390,7 @@ class ChatManager extends ManagedService implements Logger {
 	public native int sendMail(final string sendername, final unicode subject, @dereferenced StringIdChatParameter body, final string recipientName, WaypointObject waypoint = null);
 
 	@local
-	public native int sendMail(final string sendername, final unicode subject, final unicode body, final string recipientName, StringIdChatParameterVector stringIdParameters, WaypointChatParameterVector waypointParameters, @rawTemplate(value = "PersistentMessage*") Reference sentMail = null);
+	public native int sendMail(final string sendername, final unicode subject, final unicode body, final string recipientName, StringIdChatParameterVector stringIdParameters, WaypointChatParameterVector waypointParameters);
 
 	//////////////////////////////////////////////////////
 
@@ -447,6 +446,13 @@ class ChatManager extends ManagedService implements Logger {
 	}
 
 	/*
+	 * Returns the Renegades chat room
+	 */
+	public ChatRoom getRenegadesRoom() {
+		return renegadesRoom;
+	}
+
+	/*
 	 * Returns the system chat room
 	 */
 	public ChatRoom getSystemRoom() {
@@ -462,4 +468,3 @@ class ChatManager extends ManagedService implements Logger {
 	@reference
 	public native PendingMessageList getPendingMessages(unsigned long oid);
 }
-

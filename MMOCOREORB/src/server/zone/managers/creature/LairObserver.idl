@@ -14,6 +14,8 @@ include system.thread.atomic.AtomicInteger;
 
 class LairObserver extends SpawnObserver {
 
+	protected transient boolean isLargePackSpawn;
+
 	@dereferenced
 	protected AtomicInteger spawnNumber;
 
@@ -37,6 +39,14 @@ class LairObserver extends SpawnObserver {
 	public native void healLair(TangibleObject lair, TangibleObject attacker);
 	public abstract native void checkForHeal(TangibleObject lair, TangibleObject attacker, boolean forceNewUpdate = false);
 	public native void doAggro(TangibleObject lair, TangibleObject attacker, boolean allAttack = false);
+
+	public void setLargePack() {
+		isLargePackSpawn = true;
+	}
+
+	public boolean isLargePack() {
+		return isLargePackSpawn;
+	}
 
 	public boolean isLairObserver() {
 		return true;

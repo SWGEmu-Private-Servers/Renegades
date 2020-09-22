@@ -20,12 +20,32 @@ public:
         // If these are active they will block buff use
 		blockingCRCs.add(BuffCRC::JEDI_FORCE_RUN_1);
 		blockingCRCs.add(BuffCRC::JEDI_FORCE_RUN_2);
-        
+
 		skillMods.put("force_run", 3);
 		skillMods.put("slope_move", 99);
 	}
 
 	int doQueueCommand(CreatureObject* creature, const uint64& target, const UnicodeString& arguments) const {
+		if (creature->hasBuff(BuffCRC::JEDI_FORCE_RUN_3)) // Allow removal of buff on second click
+		{
+			Buff* frBuff = creature->getBuff(BuffCRC::JEDI_FORCE_RUN_3);
+			Locker frlocker(frBuff);
+			creature->removeBuff(frBuff);
+
+			Buff* mtBuff = creature->getBuff(name.hashCode());
+			Locker mtlocker(mtBuff);
+			creature->removeBuff(mtBuff);
+
+			creature->updateCooldownTimer("forcerun", 5000); // 5 second re-use
+			return -1;
+		}
+
+		if (!creature->checkCooldownRecovery("forcerun"))
+		{
+			creature->sendSystemMessage("You must wait before you can use that ability again.");
+			return -1;
+		}
+
 		int res = creature->hasBuff(buffCRC) ? NOSTACKJEDIBUFF : doJediSelfBuffCommand(creature);
 
 		if (res == NOSTACKJEDIBUFF) {
@@ -47,6 +67,8 @@ public:
 		Locker locker(multBuff);
 
 		multBuff->setSkillModifier("private_damage_divisor", 20);
+
+		creature->updateCooldownTimer("forcerun", (duration + 3) * 1000);
 
 		creature->addBuff(multBuff);
 

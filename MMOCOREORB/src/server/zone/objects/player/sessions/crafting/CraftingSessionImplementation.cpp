@@ -28,7 +28,6 @@
 
 #include "templates/customization/AssetCustomizationManagerTemplate.h"
 #include "templates/params/RangedIntCustomizationVariable.h"
-#include "server/zone/objects/transaction/TransactionLog.h"
 
 
 int CraftingSessionImplementation::initializeSession(CraftingTool* tool, CraftingStation* station) {
@@ -347,17 +346,14 @@ bool CraftingSessionImplementation::createManufactureSchematic(DraftSchematic* d
 	manufactureSchematic =
 			 (draftschematic->createManufactureSchematic(craftingTool)).castTo<ManufactureSchematic*>();
 
-	auto schematic = manufactureSchematic.get();
-
-	if (schematic == nullptr) {
+	if (manufactureSchematic.get() == nullptr) {
 		crafter->sendSystemMessage("@ui_craft:err_no_manf_schematic");
 		closeCraftingWindow(0, false);
 		cancelSession();
 		return false;
 	}
 
-	TransactionLog trx(crafter, craftingTool, schematic, TrxCode::CRAFTINGSESSION);
-	craftingTool->transferObject(schematic, 0x4, true);
+	craftingTool->transferObject(manufactureSchematic.get(), 0x4, true);
 	//manufactureSchematic->sendTo(crafter, true);
 
 	if (crafterGhost != nullptr && crafterGhost->getDebug()) {
@@ -393,7 +389,6 @@ bool CraftingSessionImplementation::createPrototypeObject(DraftSchematic* drafts
 
 	strongPrototype->createChildObjects();
 
-	TransactionLog trx(crafter, craftingTool, strongPrototype, TrxCode::CRAFTINGSESSION);
 	craftingTool->transferObject(strongPrototype, -1, false);
 	strongPrototype->sendTo(crafter, true);
 
@@ -485,11 +480,6 @@ void CraftingSessionImplementation::addIngredient(TangibleObject* tano, int slot
 	}
 
 	Locker locker(tano);
-
-	if (tano->getRootParent() == NULL) {
-		sendSlotMessage(clientCounter, IngredientSlot::INVALIDINGREDIENT);
-		return;
-	}
 
 	/// Check if item is on the player, but not in a crafting tool
 	/// Or if the item is in a crafting station to prevent some duping
@@ -651,7 +641,14 @@ void CraftingSessionImplementation::initialAssembly(int clientCounter) {
 	manufactureSchematic->setCrafter(crafter);
 
 	String expskill = draftSchematic->getExperimentationSkill();
-	experimentationPointsTotal = int(crafter->getSkillMod(expskill) / 10);
+	int expSkillMod = crafter->getSkillMod(expskill);
+
+	if (crafter->hasSkill("force_title_jedi_novice"))
+	{
+		expSkillMod += crafter->getSkillMod("force_experimentation");
+	}
+
+	experimentationPointsTotal = int(expSkillMod / 10);
 	experimentationPointsUsed = 0;
 
 	// Calculate exp failure for red bars
@@ -947,10 +944,25 @@ void CraftingSessionImplementation::experiment(int rowsAttempted, const String& 
 		manufactureSchematic->increaseComplexity();
 		prototype->setComplexity(manufactureSchematic->getComplexity());
 
-		// Do the experimenting - sets new percentages
-		craftingManager->experimentRow(manufactureSchematic, craftingValues, rowEffected,
-				pointsAttempted, failure, experimentationResult);
+		// Calculate chance for legendary bonus to amazing success roll
+		short modExpResult = experimentationResult;
+		if (experimentationResult == CraftingManager::AMAZINGSUCCESS)
+		{
+			int roll = System::random(100) + crafter->getSkillMod("luck");
+			if (crafter->hasSkill("force_title_jedi_novice"))
+			{
+				roll += crafter->getSkillMod("force_experimentation") + ((crafter->getSkillMod("force_luck")  / 4) * 25);
+			}
 
+			if (roll >= 90)
+			{
+				modExpResult = CraftingManager::EXCEPTIONALSUCCESS;
+				crafter->sendSystemMessage("Your amazing success had exceptional results!");
+			}
+		}
+
+		// Do the experimenting - sets new percentages
+		craftingManager->experimentRow(manufactureSchematic, craftingValues, rowEffected, pointsAttempted, failure, modExpResult);
 	}
 
 	manufactureSchematic->setExperimentingCounter(
@@ -1208,12 +1220,12 @@ void CraftingSessionImplementation::createPrototype(int clientCounter, bool crea
 
 		if (createItem) {
 
-			startCreationTasks(manufactureSchematic->getComplexity() * 2, false);
+			startCreationTasks((((double)manufactureSchematic->getComplexity() * 2.0) * 0.1), false);
 
 		} else {
 
 			// This is for practicing
-			startCreationTasks(manufactureSchematic->getComplexity() * 2, true);
+			startCreationTasks((((double)manufactureSchematic->getComplexity() * 2.0) * 0.1), true);
 			xp = round(xp * 1.05f);
 		}
 
@@ -1309,7 +1321,6 @@ void CraftingSessionImplementation::createManufactureSchematic(int clientCounter
 		manufactureSchematic->setPersistent(2);
 		prototype->setPersistent(2);
 
-		TransactionLog trx(crafter, datapad, manufactureSchematic, TrxCode::CRAFTINGSESSION);
 		datapad->transferObject(manufactureSchematic, -1, true);
 		manufactureSchematic->setPrototype(prototype);
 
@@ -1405,11 +1416,6 @@ bool CraftingSessionImplementation::checkPrototype() {
 
 		if (weapon->hasPowerup())
 			return false;
-	}
-
-	if (prototype->getContainerObjectsSize() > 0) {
-		error() << "checkPrototype(): prototype->getContainerObjectsSize() > 0, prototype: " << *prototype;
-		return false;
 	}
 
 	return true;

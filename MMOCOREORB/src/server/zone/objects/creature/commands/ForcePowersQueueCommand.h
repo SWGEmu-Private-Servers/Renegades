@@ -24,6 +24,9 @@ public:
 	}
 
 	int doCombatAction(CreatureObject* creature, const uint64& target, const UnicodeString& arguments = "") const {
+		if (creature->isKnockedDown())
+			return INVALIDLOCOMOTION;
+
 		ManagedReference<SceneObject*> targetObject = server->getZoneServer()->getObject(target);
 
 		if (targetObject == nullptr || !targetObject->isTangibleObject() || targetObject == creature)

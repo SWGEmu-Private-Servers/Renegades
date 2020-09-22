@@ -9,9 +9,8 @@
 #include "server/ServerCore.h"
 #include "server/zone/objects/creature/CreatureObject.h"
 #include "server/chat/ChatManager.h"
-#include "server/zone/managers/collision/NavMeshManager.h"
 #include "server/zone/managers/director/DirectorManager.h"
-#include "server/zone/managers/object/ObjectManager.h"
+#include "server/zone/managers/collision/NavMeshManager.h"
 
 #ifdef COMPILE_CORE3_TESTS
 #include "tests/TestCore.h"
@@ -67,8 +66,6 @@ int main(int argc, char* argv[]) {
 			testing::InitGoogleTest(&argc, argv);
 
 			ret = RUN_ALL_TESTS();
-
-			ObjectManager::instance()->shutdown();
 #endif
 		} else if (arguments.contains("dumpNavMeshesToFile")) {
 			NavMeshManager::instance()->info("Dumping nav meshes to files...", true);

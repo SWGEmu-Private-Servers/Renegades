@@ -19,6 +19,9 @@ class LairObject extends TangibleObject {
 	protected transient AtomicInteger numberOfPlayersInRange;
 
 	protected boolean despawnOnNoPlayersInRange;
+	protected boolean isLargePackSpawn;
+
+	protected int spawnBonus;
 
 	protected transient DespawnLairOnPlayerDisappear despawnEvent;
 
@@ -29,11 +32,17 @@ class LairObject extends TangibleObject {
 		super.closeobjects.setNoDuplicateInsertPlan();
 
 		despawnOnNoPlayersInRange = false;
+		isLargePackSpawn = false;
 	}
 
 	@dirty
 	public int getNumberOfPlayersInRange() {
 		return numberOfPlayersInRange.get();
+	}
+
+	@read
+	public boolean isLargePack() {
+		return isLargePackSpawn;
 	}
 
 	@read
@@ -44,6 +53,15 @@ class LairObject extends TangibleObject {
 	@preLocked
 	public void setDespawnOnNoPlayersInRange(boolean b) {
 		despawnOnNoPlayersInRange = b;
+	}
+
+	public int getSpawnBonus() {
+		return spawnBonus;
+	}
+
+	public void setLargePack(int n) {
+		spawnBonus = n;
+		isLargePackSpawn = true;
 	}
 
 	public void notifyInsert(QuadTreeEntry entry) {

@@ -63,19 +63,25 @@ void GroupManager::inviteToGroup(CreatureObject* leader, CreatureObject* target)
 		}
 
 		// can't invite if the group is full
-		if (group->getGroupSize() >= 20) {
+		if (group->getGroupSize() >= 200) {
 			leader->sendSystemMessage("@group:full");
 			return;
 		}
 	}
 
 	if (target->isGrouped()) {
-		StringIdChatParameter stringId;
-		stringId.setStringId("group", "already_grouped");
-		stringId.setTT(target->getObjectID());
-		leader->sendSystemMessage(stringId);
-		//leader->sendSystemMessage("group", "already_grouped", player->getObjectID());
-
+		if ((!leader->isGrouped()) && ((target->hasSkill("social_dancer_novice")) || (target->hasSkill("social_musician_novice"))))
+		{
+			inviteToGroup(target, leader);
+		}
+		else
+		{
+			StringIdChatParameter stringId;
+			stringId.setStringId("group", "already_grouped");
+			stringId.setTT(target->getObjectID());
+			leader->sendSystemMessage(stringId);
+			//leader->sendSystemMessage("group", "already_grouped", player->getObjectID());
+		}
 		return;
 	}
 
@@ -151,7 +157,7 @@ void GroupManager::joinGroup(CreatureObject* player) {
 
 	Locker clocker2(group, player);
 
-	if (group->getGroupSize() >= 20) {
+	if (group->getGroupSize() >= 200) {
 		clocker.release();
 
 		player->updateGroupInviterID(0);
@@ -856,4 +862,3 @@ void GroupManager::makeLeader(GroupObject* group, CreatureObject* player, Creatu
 		}
 
 	}
-

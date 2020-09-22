@@ -838,5 +838,5 @@ bool SkillManager::villageKnightPrereqsMet(CreatureObject* creature, const Strin
 		totalJediPoints -= skillBeingDropped->getSkillPointsRequired();
 	}
 
-	return fullTrees >= 2 && totalJediPoints >= 206;
+	return fullTrees >= 2 && totalJediPoints >= 236;
 }

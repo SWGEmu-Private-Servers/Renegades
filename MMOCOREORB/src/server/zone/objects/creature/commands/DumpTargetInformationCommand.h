@@ -60,7 +60,8 @@ public:
 		if (buildingTemplate != 0)
 			msg << endl << TemplateManager::instance()->getTemplateFile(buildingTemplate);
 
-		if (obj->isAiAgent()) {
+		if (obj->isAiAgent())
+		{
 			AiAgent* objCreo = obj.castTo<AiAgent*>();
 
 			PatrolPoint* home = objCreo->getHomeLocation();
@@ -98,6 +99,12 @@ public:
 			}
 
 			msg << endl << "numberOfPlayersInRange = " << objCreo->getNumberOfPlayersInRange();
+
+			msg << endl << "spawnMobile(" << obj->getZone()->getZoneName() << ", " << obj->getObjectNameStringIdName() << ", 0, " << posX << ", " << posZ << ", " << posY << ", 0, (parentID + " << cellid << "))";
+		}
+		else
+		{
+			msg << endl << "spawnSceneObject(" << obj->getZone()->getZoneName() << ", " << obj->getObjectTemplate()->getFullTemplateString() << ", " << posX << ", " << posZ << ", " << posY << ", (parentID + " << cellid << "), 0)";
 		}
 
 		player->sendSystemMessage(msg.toString());

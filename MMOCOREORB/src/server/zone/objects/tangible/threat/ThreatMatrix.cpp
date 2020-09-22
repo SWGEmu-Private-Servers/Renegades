@@ -166,6 +166,3 @@ void ThreatMatrix::print() {
 	System::out << "*************************************" << endl;
 
 }
-
-
-

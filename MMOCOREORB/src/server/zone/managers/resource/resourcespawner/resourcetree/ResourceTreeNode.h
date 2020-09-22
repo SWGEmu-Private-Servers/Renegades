@@ -49,6 +49,8 @@ public:
 
 	void addToSuiListBox(SuiListBox* suil) const;
 
+	void addToSuiListBoxCR(SuiListBox* suil) const;
+
 	//void updateEntries();
 
 	void toString() const;
@@ -59,4 +61,3 @@ private:
 			const Vector<String> excludes) const;
 
 };
-
