@@ -73,12 +73,6 @@ function SkillTrainer:sendSkillInfoSui(pPlayer, pNpc, skillName)
 	local skillObject = LuaSkill(pSkill)
 
 	local pointsReq = skillObject:getSkillPointsRequired()
-	local moneyRequired = skillObject:getMoneyRequired()
-	local persuasion = CreatureObject(pPlayer):getSkillMod("force_persuade")
-
-	if (persuasion > 0) then
-		moneyRequired = moneyRequired - ((moneyRequired * persuasion) / 100)
-	end
 
 	local skillReqTable = skillObject:getSkillsRequired()
 	local xpCost = skillObject:getXpCost()
@@ -93,7 +87,7 @@ function SkillTrainer:sendSkillInfoSui(pPlayer, pNpc, skillName)
 	sui.setForceCloseDistance(10)
 
 	sui.add("MONETARY COST", "")
-	sui.add(" " .. moneyRequired .. " credits", "")
+	sui.add(" 0 credits", "")
 
 	sui.add("SKILL POINT COST", "")
 	sui.add(" " .. pointsReq .. " points", "")

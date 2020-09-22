@@ -58,7 +58,7 @@ Core3 = {
 	DBUser = "swgemu",
 	DBPass = "123456",
 	DBInstances = 2,
-	DBSecret = "swgemus3cr37!", -- Change this! This value should be unique and of reasonable length.
+	DBSecret = "!4kittensRcool2!", -- Change this! This value should be unique and of reasonable length.
 
 	LoginPort = 44453,
 	LoginProcessingThreads = 1,
@@ -96,20 +96,20 @@ Core3 = {
 	--"11",
 	--"character_farm",
 	--"cinco_city_test_m5",
-	--"corellia",
+	"corellia",
 	--"creature_test",
-	--"dantooine",
-	--"dathomir",
+	"dantooine",
+	"dathomir",
 	--"dungeon1",
-	--"endor",
+	"endor",
 	--"endor_asommers",
 	--"floratest",
 	--"godclient_test",
-	--"lok",
-	--"naboo",
+	"lok",
+	"naboo",
 	--"otoh_gunga",
 	--"rivertest",
-	--"rori",
+	"rori",
 	--"runtimerules",
 	--"simple",
 	--"space_09",
@@ -129,13 +129,13 @@ Core3 = {
 	--"space_tatooine_2",
 	--"space_yavin4",
 	--"taanab",
-	--"talus",
+	"talus",
 	"tatooine",
 	--"test_wearables",
 	"tutorial",
 	--"umbra",
 	--"watertabletest",
-	--"yavin4"
+	"yavin4"
 	},
 
 
@@ -144,6 +144,7 @@ Core3 = {
 
 	-- Each tre file (order is important!)
 	TreFiles = {
+		"renegades.tre",
 		"default_patch.tre",
 		"patch_sku1_14_00.tre",
 		"patch_14_00.tre",

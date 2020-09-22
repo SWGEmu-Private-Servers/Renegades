@@ -46,8 +46,8 @@ ForceLightningSingle2Command = {
 
 	minDamage = 600,
 	maxDamage = 1200,
-	speed = 4.0,
-	forceCost = 150,
+	speed = 2.0,
+	forceCost = 50,
 	visMod = 25,
 	accuracySkillMod = "forcelightning_accuracy",
 
@@ -68,7 +68,22 @@ ForceLightningSingle2Command = {
 
 	combatSpam = "forcelightningsingle2",
 
-	poolsToDamage = RANDOM_ATTRIBUTE,
+	dotEffects = {
+	  DotEffect(
+		ONFIRE,
+		{"resistance_fire", "fire_resist"},
+		HEALTH,
+		true,
+		0,
+		100,
+		100,
+		60,
+		20,
+		5
+	  )
+	},
+
+	poolsToDamage = HEALTH_ATTRIBUTE,
 
 	forceAttack = true,
 	damageType = ELECTRICITY_DAMAGE,

@@ -55,13 +55,13 @@ SaberThrow3Command = {
 	visMod = 25,
 
 	stateEffects = {
-	   StateEffect( 
-		KNOCKDOWN_EFFECT, 
-		{ "knockdownRecovery", "lastKnockdown" }, 
-		{ "knockdown_defense" }, 
+	   StateEffect(
+		KNOCKDOWN_EFFECT,
+		{ "knockdownRecovery", "lastKnockdown" },
+		{ "knockdown_defense" },
 		{},
-		100, 
-		0, 
+		100,
+		0,
 		0
 	  )
 	},
@@ -74,8 +74,7 @@ SaberThrow3Command = {
 
 	weaponType = JEDIWEAPON,
 
-	range = 32
+	range = 64
 }
 
 AddCommand(SaberThrow3Command)
-

@@ -161,12 +161,7 @@ function trainerConvHandler:handleLearnScreen(pConvTemplate, pPlayer, pNpc, sele
 	local skillStringId = getStringId("@skl_n:" .. skillName)
 	local skillObject = LuaSkill(pSkill)
 
-	local moneyRequired = skillObject:getMoneyRequired()
-	local persuasion = CreatureObject(pPlayer):getSkillMod("force_persuade")
-
-	if (persuasion > 0) then
-		moneyRequired = moneyRequired - ((moneyRequired * persuasion) / 100)
-	end
+	local moneyRequired = 0
 
 	clonedConversation:setDialogTextStringId(stringTable .. "prose_cost")
 	clonedConversation:setDialogTextDI(moneyRequired)
@@ -198,6 +193,12 @@ function trainerConvHandler:handleConfirmLearnScreen(pConvTemplate, pPlayer, pNp
 		return pConvScreen
 	end
 
+	if (CreatureObject(pPlayer):hasSkill("force_rank_light_novice") or CreatureObject(pPlayer):hasSkill("force_rank_dark_novice")) and not string.find(skillName, "force_sensitive_") then
+		local convoTemplate = LuaConversationTemplate(pConvTemplate)
+		pConvScreen = convoTemplate:getScreen("intro")
+		return self:runScreenHandlers(pConvTemplate, pPlayer, pNpc, selectedOption, pConvScreen)
+	end
+
 	local pSkill = skillManager:getSkill(skillName)
 
 	if (pSkill == nil) then
@@ -207,12 +208,7 @@ function trainerConvHandler:handleConfirmLearnScreen(pConvTemplate, pPlayer, pNp
 	local skillStringId = getStringId("@skl_n:" .. skillName)
 	local skillObject = LuaSkill(pSkill)
 
-	local moneyRequired = skillObject:getMoneyRequired()
-	local persuasion = CreatureObject(pPlayer):getSkillMod("force_persuade")
-
-	if (persuasion > 0) then
-		moneyRequired = moneyRequired - ((moneyRequired * persuasion) / 100)
-	end
+	local moneyRequired = 0
 
 	local cashCredits = CreatureObject(pPlayer):getCashCredits()
 	local bankCredits = CreatureObject(pPlayer):getBankCredits()

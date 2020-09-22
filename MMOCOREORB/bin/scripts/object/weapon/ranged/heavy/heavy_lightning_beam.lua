@@ -3,42 +3,42 @@
 
 --This File is part of Core3.
 
---This program is free software; you can redistribute 
---it and/or modify it under the terms of the GNU Lesser 
+--This program is free software; you can redistribute
+--it and/or modify it under the terms of the GNU Lesser
 --General Public License as published by the Free Software
---Foundation; either version 2 of the License, 
+--Foundation; either version 2 of the License,
 --or (at your option) any later version.
 
---This program is distributed in the hope that it will be useful, 
---but WITHOUT ANY WARRANTY; without even the implied warranty of 
---MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+--This program is distributed in the hope that it will be useful,
+--but WITHOUT ANY WARRANTY; without even the implied warranty of
+--MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 --See the GNU Lesser General Public License for
 --more details.
 
---You should have received a copy of the GNU Lesser General 
+--You should have received a copy of the GNU Lesser General
 --Public License along with this program; if not, write to
 --the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
---Linking Engine3 statically or dynamically with other modules 
---is making a combined work based on Engine3. 
---Thus, the terms and conditions of the GNU Lesser General Public License 
+--Linking Engine3 statically or dynamically with other modules
+--is making a combined work based on Engine3.
+--Thus, the terms and conditions of the GNU Lesser General Public License
 --cover the whole combination.
 
---In addition, as a special exception, the copyright holders of Engine3 
---give you permission to combine Engine3 program with free software 
---programs or libraries that are released under the GNU LGPL and with 
---code included in the standard release of Core3 under the GNU LGPL 
---license (or modified versions of such code, with unchanged license). 
---You may copy and distribute such a system following the terms of the 
---GNU LGPL for Engine3 and the licenses of the other code concerned, 
---provided that you include the source code of that other code when 
+--In addition, as a special exception, the copyright holders of Engine3
+--give you permission to combine Engine3 program with free software
+--programs or libraries that are released under the GNU LGPL and with
+--code included in the standard release of Core3 under the GNU LGPL
+--license (or modified versions of such code, with unchanged license).
+--You may copy and distribute such a system following the terms of the
+--GNU LGPL for Engine3 and the licenses of the other code concerned,
+--provided that you include the source code of that other code when
 --and as the GNU LGPL requires distribution of source code.
 
---Note that people who make modified versions of Engine3 are not obligated 
---to grant this special exception for their modified versions; 
---it is their choice whether to do so. The GNU Lesser General Public License 
---gives permission to release a modified version without this exception; 
---this exception also makes it possible to release a modified version 
+--Note that people who make modified versions of Engine3 are not obligated
+--to grant this special exception for their modified versions;
+--it is their choice whether to do so. The GNU Lesser General Public License
+--gives permission to release a modified version without this exception;
+--this exception also makes it possible to release a modified version
 
 
 object_weapon_ranged_heavy_heavy_lightning_beam = object_weapon_ranged_heavy_shared_heavy_lightning_beam:new {
@@ -84,7 +84,7 @@ object_weapon_ranged_heavy_heavy_lightning_beam = object_weapon_ranged_heavy_sha
 	-- See http://www.ocdsoft.com/files/certifications.xls
 	certificationsRequired = { "cert_heavy_lightning_beam" },
 	-- See http://www.ocdsoft.com/files/accuracy.xls
-	creatureAccuracyModifiers = { "heavy_lightning_beam_accuracy" },
+	creatureAccuracyModifiers = { "heavy_lightning_beam_accuracy", "heavyweapon_accuracy" },
 
 	creatureAimModifiers = { },
 
@@ -95,7 +95,7 @@ object_weapon_ranged_heavy_heavy_lightning_beam = object_weapon_ranged_heavy_sha
 	defenderSecondaryDefenseModifiers = { },
 
 	-- See http://www.ocdsoft.com/files/speed.xls
-	speedModifiers = { "heavy_lightning_beam_speed" },
+	speedModifiers = { "heavy_lightning_beam_speed", "heavyweapon_speed" },
 
 	useCount = 40,
 
@@ -108,13 +108,13 @@ object_weapon_ranged_heavy_heavy_lightning_beam = object_weapon_ranged_heavy_sha
 	forceCost = 0,
 
 	pointBlankRange = 0,
-	pointBlankAccuracy = -20,
+	pointBlankAccuracy = 0,
 
 	idealRange = 16,
-	idealAccuracy = -20,
+	idealAccuracy = 50,
 
 	maxRange = 64,
-	maxRangeAccuracy = -80,
+	maxRangeAccuracy = 0,
 
 	minDamage = 10,
 	maxDamage = 400,
@@ -128,8 +128,8 @@ object_weapon_ranged_heavy_heavy_lightning_beam = object_weapon_ranged_heavy_sha
 	experimentalWeights = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 	experimentalGroupTitles = {"null", "null", "expDamage", "expDamage", "expDamage", "expDamage", "expEffeciency", "exp_durability", "null", "null", "null", "expRange", "expEffeciency", "expEffeciency", "expEffeciency", "expEffeciency"},
 	experimentalSubGroupTitles = {"null", "null", "mindamage", "maxdamage", "attackspeed", "woundchance", "roundsused", "hitpoints", "zerorangemod", "maxrangemod", "midrange", "midrangemod", "charges", "attackhealthcost", "attackactioncost", "attackmindcost"},
-	experimentalMin = {0, 0, 936, 1550, 9.6, 13, 30, 750, -45, -125, 32, 0, 25, 45, 97, 26},
-	experimentalMax = {0, 0, 1340, 3400, 5.4, 23, 65, 1500, -35, -95, 32, 40, 50, 24, 52, 14},
+	experimentalMin = {0, 0, 936, 1550, 9.6, 13, 30, 750, 0, 0, 25, 0, 25, 45, 97, 26},
+	experimentalMax = {0, 0, 1340, 3400, 5.4, 23, 65, 1500, 5, 5, 75, 40, 50, 24, 52, 14},
 	experimentalPrecision = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	experimentalCombineType = {0, 0, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1},
 }

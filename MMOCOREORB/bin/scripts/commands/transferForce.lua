@@ -43,7 +43,7 @@
 
 TransferForceCommand = {
 	name = "transferforce",
-	defaultTime = 2.0,
+	defaultTime = 1,
 	forceCost = 200,
 	minDamage = 150,
 	visMod = 25,
@@ -53,4 +53,3 @@ TransferForceCommand = {
 }
 
 AddCommand(TransferForceCommand)
-

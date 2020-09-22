@@ -41,15 +41,15 @@
 --which carries forward this exception.
 
 --Time, in seconds, that a shuttle is away for
-shuttleportAwayTime = 300
-starportAwayTime = 60
+shuttleportAwayTime = 60
+starportAwayTime = 120
 
 --Time, in seconds, that a shuttle takes to land
-shuttleportLandingTime = 11
-starportLandingTime = 14
+shuttleportLandingTime = 10
+starportLandingTime = 10
 
 --Time, in seconds, that a shuttle is landed for
-shuttleportLandedTime = 120
+shuttleportLandedTime = 60
 starportLandedTime = 120
 
 
@@ -197,7 +197,8 @@ dathomir = {
 	planetObjects = {
 		{templateFile = "object/tangible/terminal/terminal_character_builder.iff", ox = 0, oy = 0.701463, oz = 0, ow = 0.712705, x = 592.612, z = 6, y = 3089.84, parentid = 0},
 		{templateFile = "object/tangible/terminal/terminal_character_builder.iff", ox = 0, oy = 0.314904, oz = 0, ow = 0.949123, x = -67.6585, z = 18, y = -1595.3, parentid = 0},
-		{templateFile = "object/tangible/terminal/terminal_character_builder.iff", ox = 0, oy = 0.314904, oz = 0, ow = 0.949123, x = 5289.6, z = 78.5, y = -4146.1, parentid = 0}
+		{templateFile = "object/tangible/terminal/terminal_character_builder.iff", ox = 0, oy = 0.314904, oz = 0, ow = 0.949123, x = 5289.6, z = 78.5, y = -4146.1, parentid = 0},
+		{templateFile = "object/tangible/terminal/terminal_mission.iff", ox = 0, oy = 0.0, oz = 0, ow = 0.0, x = 5282.0, z = 78.5, y = -4241.0, parentid = 0}
 	}
 }
 
@@ -709,4 +710,11 @@ tutorial = {
 dungeon1 = {
 	weatherEnabled = 0,
 	gcwEnabled = 0,
+}
+
+space_renegades_station = {
+	weatherEnabled = 0,
+	planetTravelPoints = {
+		{name = "Galaxy Station", x = 89.4762, z = 0.8, y = -67.4581, ow = 0.611856, ox = 0, oz = 0, oy = 0.790969, cellid = 8, parentid = 98364344, interplanetaryTravelAllowed = 1, incomingTravelAllowed = 1}
+	},
 }

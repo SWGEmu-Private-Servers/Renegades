@@ -34,13 +34,14 @@ nym_destroyer = Creature:new {
 	lootGroups = {
 		{
 			groups = {
+				{group = "nyms_common", chance = 6000000},
 				{group = "junk", chance = 4500000},
 				{group = "wearables_uncommon", chance = 2000000},
-				{group = "nyms_common", chance = 1000000},
 				{group = "pistols", chance = 1000000},
 				{group = "carbines", chance = 1000000},
 				{group = "tailor_components", chance = 500000}
-			}
+			},
+			lootChance = 5000000
 		}
 	},
 	weapons = {"rebel_weapons_medium"},

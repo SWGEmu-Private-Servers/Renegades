@@ -33,10 +33,12 @@ janta_rockshaper = Creature:new {
 	lootGroups = {
 		{
 			groups = {
-				{group = "junk", chance = 5000000},
-				{group = "janta_common", chance = 1500000},
-				{group = "loot_kit_parts", chance = 3000000},
-				{group = "wearables_all", chance = 500000}
+				{group = "armor_attachments", chance = 500000},
+				{group = "clothing_attachments", chance = 500000},
+				{group = "junk", chance = 500000},
+				{group = "janta_common", chance = 10000000},
+				{group = "loot_kit_parts", chance = 300000},
+				{group = "wearables_all", chance = 1000000}
 			}
 		}
 	},

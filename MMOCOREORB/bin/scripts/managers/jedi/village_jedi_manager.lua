@@ -123,14 +123,11 @@ end
 
 --Check to ensure force skill prerequisites are maintained
 function VillageJediManager:canSurrenderSkill(pPlayer, skillName)
-
-	if skillName == "force_title_jedi_rank_02" or skillName == "force_title_jedi_novice" then
-		CreatureObject(pPlayer):sendSystemMessage("@jedi_spam:revoke_force_title")
+	if skillName == "force_title_jedi_novice" and CreatureObject(pPlayer):getForceSensitiveSkillCount(true) > 0 then
 		return false
 	end
 
 	if string.find(skillName, "force_sensitive_") and CreatureObject(pPlayer):hasSkill("force_title_jedi_rank_02") and CreatureObject(pPlayer):getForceSensitiveSkillCount(false) <= 24 then
-		CreatureObject(pPlayer):sendSystemMessage("@jedi_spam:revoke_force_sensitive")
 		return false
 	end
 

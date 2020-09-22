@@ -49,6 +49,15 @@ function JediTrials:isEligibleForKnightTrials(pPlayer)
 		return false
 	end
 
+	if (CreatureObject(pPlayer):hasSkill("combat_brawler_novice") or
+			CreatureObject(pPlayer):hasSkill("combat_marksman_novice") or
+			CreatureObject(pPlayer):hasSkill("social_entertainer_novice") or
+			CreatureObject(pPlayer):hasSkill("outdoors_scout_novice") or
+			CreatureObject(pPlayer):hasSkill("science_medic_novice") or
+			CreatureObject(pPlayer):hasSkill("crafting_artisan_novice") ) then
+		return false
+	end
+
 	return CreatureObject(pPlayer):villageKnightPrereqsMet("")
 end
 
@@ -507,11 +516,6 @@ function JediTrials:completeKnightForTesting(pPlayer, councilType)
 			enclaveLoc = { 5079, 0, 305 }
 		end
 
-		local player = CreatureObject(pPlayer)
-
-		if (player:isRidingMount()) then
-			player:dismount()
-		end
 		SceneObject(pPlayer):switchZone("yavin4", enclaveLoc[1], enclaveLoc[2], enclaveLoc[3], 0)
 	end
 end

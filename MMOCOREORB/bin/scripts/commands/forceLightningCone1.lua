@@ -47,7 +47,7 @@ ForceLightningCone1Command = {
 	minDamage = 300,
 	maxDamage = 600,
 	speed = 4.0,
-	forceCost = 125,
+	forceCost = 50,
 	accuracySkillMod = "forcelightning_accuracy",
 	coneAngle = 40,
 	coneAction = true,
@@ -58,7 +58,22 @@ ForceLightningCone1Command = {
 
 	combatSpam = "forcelightningcone1",
 
-	poolsToDamage = RANDOM_ATTRIBUTE,
+	dotEffects = {
+	  DotEffect(
+		ONFIRE,
+		{"resistance_fire", "fire_resist"},
+		HEALTH,
+		true,
+		0,
+		100,
+		100,
+		60,
+		10,
+		2
+	  )
+	},
+
+	poolsToDamage = HEALTH_ATTRIBUTE,
 
 	forceAttack = true,
 	damageType = ELECTRICITY_DAMAGE,

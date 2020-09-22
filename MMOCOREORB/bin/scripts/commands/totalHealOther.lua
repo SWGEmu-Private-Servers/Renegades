@@ -44,23 +44,22 @@
 TotalHealOtherCommand = {
 	name = "totalhealother",
 	statesToHeal = STUNNED_STATE + DIZZY_STATE + BLINDED_STATE + INTIMIDATED_STATE,
-	healDiseaseCost = 50,
+	healDiseaseCost = 10,
 	diseaseHealIterations = 2,
-	healPoisonCost = 50,
+	healPoisonCost = 10,
 	poisonHealIterations = 2,
-	healBleedingCost = 50,
+	healBleedingCost = 10,
 	bleedHealIterations = 2,
-	healStateCost = 50,
-	healAmount = 1000,
+	healStateCost = 10,
+	healAmount = 5000,
 	attributesToHeal = HEALTH_ATTRIBUTE + MIND_ATTRIBUTE + ACTION_ATTRIBUTE,
 	woundAttributesToHeal = HEALTH_ATTRIBUTE + MIND_ATTRIBUTE + ACTION_ATTRIBUTE,
 	healBattleFatigue = 250,
 	healWoundAmount = 250,
-	forceCost = 300,
+	forceCost = 200,
 	forceCostMultiplier = 0.1,
-	defaultTime = 3,
+	defaultTime = 1,
 	range = 32,
 }
 
 AddCommand(TotalHealOtherCommand)
-

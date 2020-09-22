@@ -8,7 +8,7 @@ FsOutro = ScreenPlay:new {
 	FORCESHRINE = 4,
 
 	stepDelay = {
-		[1] = { 15600, 86400 }, -- Old man visit, 1 hour to 1 day
+		[1] = { 300, 900 }, -- Old man visit, 5 minutes (300) to 15 minutes (900)
 	}
 }
 
@@ -37,7 +37,7 @@ function FsOutro:hasDelayPassed(pPlayer)
 	if (stepDelay == nil or stepDelay == 0) then
 		return true
 	end
-	
+
 	return os.time() >= stepDelay
 end
 
@@ -74,7 +74,7 @@ function FsOutro:startOldMan(pPlayer)
 	end
 
 	local stepData = self.stepDelay[self.OLDMANWAIT]
-	
+
 	if (stepData == nil) then
 		printLuaError("FsOutro:startOldMan, invalid step data.")
 		return

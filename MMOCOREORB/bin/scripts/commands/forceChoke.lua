@@ -46,8 +46,8 @@ ForceChokeCommand = {
 
 	minDamage = 175,
 	maxDamage = 375,
-	speed = 4.0,
-	forceCost = 400,
+	speed = 2.0,
+	forceCost = 100,
 	visMod = 25,
 	forceAttack = true,
 	accuracyBonus = 95,
@@ -60,7 +60,7 @@ ForceChokeCommand = {
 	poolsToDamage = HEALTH_ATTRIBUTE,
 	damageType = LIGHTSABER_DAMAGE,
 
-	range = 32,
+	range = 64,
 
 	dotEffects = {
 		DotEffect(

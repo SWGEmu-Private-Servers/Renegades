@@ -35,11 +35,12 @@ nym_guard = Creature:new {
 		{
 			groups = {
 				{group = "junk", chance = 6500000},
-				{group = "nyms_common", chance = 1000000},
+				{group = "nyms_common", chance = 6000000},
 				{group = "pistols", chance = 1000000},
 				{group = "carbines", chance = 1000000},
 				{group = "tailor_components", chance = 500000}
-			}
+			},
+			lootChance = 5000000
 		}
 	},
 	weapons = {"pirate_weapons_medium"},
